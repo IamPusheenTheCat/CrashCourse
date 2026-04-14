@@ -50,7 +50,7 @@ export const QUESTIONS: Question[] = [
         correct: false,
       },
     ],
-    videoSrc: '/videos/sample2.mp4',
+    videoSrc: '/videos/sample3.mp4',
     videoLabel: 'Large trucks',
   },
   {
