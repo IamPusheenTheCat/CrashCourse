@@ -17,3 +17,7 @@ xcuserdata/
 # Env
 .env
 .env.local
+
+# Python（勿把虚拟环境提交进前端仓库）
+.venv/
+venv/
