@@ -53,7 +53,9 @@ export async function getNextQuestion(): Promise<QuestionDetail> {
     method: 'GET',
   });
   if (res.code !== 200 || !res.data) {
-    throw new Error(res.msg || 'No question available');
+    const m = res.msg?.trim();
+    const vague = !m || m.toLowerCase() === 'success';
+    throw new Error(vague ? 'No question available' : m);
   }
   return res.data;
 }

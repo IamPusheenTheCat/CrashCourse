@@ -26,7 +26,7 @@ const items = [
     iconBg: 'bg-white/10',
     iconColor: 'text-white/80',
     title: 'Settings',
-    sub: 'Sound, notifications',
+    sub: 'Sounds, videos & reminders',
   },
 ] as const;
 

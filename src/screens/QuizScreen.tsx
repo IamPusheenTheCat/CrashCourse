@@ -12,6 +12,12 @@ import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { FEEDBACK_DURATION_MS } from '../components/VideoOverlay';
 import type { SubmitAnswerResult } from '../types/quiz';
 
+/** Pool empty / nothing to serve next — show “practice complete”, not a load failure */
+function isPracticeFinishedNoMore(message: string): boolean {
+  const m = message.trim().toLowerCase();
+  return m.includes('no question available') || m.includes('no more questions');
+}
+
 export default function QuizScreen() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
@@ -164,14 +170,34 @@ export default function QuizScreen() {
   }
 
   if (error && !current && source === 'practice') {
+    const finished = isPracticeFinishedNoMore(error);
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-160px)] px-4">
         <div className="glass p-8 rounded-2xl text-center max-w-[320px]">
-          <p className="text-white/90 text-sm">{error}</p>
+          {finished ? (
+            <>
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/30 flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-circle-check text-3xl text-emerald-400" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Practice complete</h2>
+            </>
+          ) : (
+            <>
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/25 flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-exclamation-circle text-2xl text-amber-400" />
+              </div>
+              <h2 className="text-lg font-bold text-white">Could not load practice</h2>
+              <p className="text-white/75 text-sm mt-2 leading-relaxed">{error}</p>
+            </>
+          )}
           <button
             type="button"
             onClick={() => navigate('/menu')}
-            className="w-full mt-6 py-3.5 rounded-xl bg-[#e94560] text-white font-semibold"
+            className={`w-full mt-6 py-3.5 rounded-xl font-semibold active:scale-[0.98] transition-transform ${
+              finished
+                ? 'bg-[#e94560] text-white shadow-lg shadow-[#e94560]/25'
+                : 'border border-white/25 text-white'
+            }`}
           >
             Back to menu
           </button>
