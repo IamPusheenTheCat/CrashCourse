@@ -110,8 +110,7 @@ src/
 │   ├── ProfileScreen.tsx
 │   └── SettingsScreen.tsx
 public/
-├── videos/                  # Crash feedback videos (sample1-4.mp4)
-└── tutorialVideos/          # Onboarding demo videos
+└── tutorialVideos/          # Onboarding demo videos (local). Wrong-answer videos come from API `warning_video_url` (e.g. Supabase Storage).
 ```
 
 ## For Teammates
