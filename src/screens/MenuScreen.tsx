@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuizStore } from '../stores/quizStore';
 import GlassCard from '../components/GlassCard';
@@ -31,12 +32,25 @@ const items = [
 
 export default function MenuScreen() {
   const navigate = useNavigate();
-  const resetSession = useQuizStore((s) => s.resetSession);
+  const startPractice = useQuizStore((s) => s.startPractice);
+  const [practiceError, setPracticeError] = useState<string | null>(null);
+  const [practiceLoading, setPracticeLoading] = useState(false);
 
-  const handleTap = (key: string) => {
+  const handleTap = async (key: string) => {
     if (key === 'practice') {
-      resetSession();
-      navigate('/quiz');
+      setPracticeError(null);
+      setPracticeLoading(true);
+      try {
+        await startPractice();
+        const err = useQuizStore.getState().error;
+        if (err) {
+          setPracticeError(err);
+          return;
+        }
+        navigate('/quiz');
+      } finally {
+        setPracticeLoading(false);
+      }
     } else if (key === 'review') {
       navigate('/review');
     } else if (key === 'settings') {
@@ -54,15 +68,25 @@ export default function MenuScreen() {
         <p className="text-white/70 text-sm mt-1">Choose a mode</p>
       </div>
 
+      {practiceError ? (
+        <p className="text-amber-400 text-xs text-center mb-3 px-2" role="alert">
+          {practiceError}
+        </p>
+      ) : null}
+
       <div className="flex flex-col gap-3">
         {items.map((item) => (
           <GlassCard
             key={item.key}
             className="p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform"
-            onClick={() => handleTap(item.key)}
+            onClick={() => void handleTap(item.key)}
           >
             <div className={`w-12 h-12 rounded-xl ${item.iconBg} flex items-center justify-center`}>
-              <i className={`fas ${item.icon} ${item.iconColor}`} />
+              {item.key === 'practice' && practiceLoading ? (
+                <i className="fas fa-circle-notch fa-spin text-emerald-400" />
+              ) : (
+                <i className={`fas ${item.icon} ${item.iconColor}`} />
+              )}
             </div>
             <div className="flex-1">
               <p className="font-semibold text-white">{item.title}</p>

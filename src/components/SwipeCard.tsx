@@ -6,25 +6,42 @@ import {
   animate,
   type PanInfo,
 } from 'framer-motion';
-import type { Question } from '../data/questions';
+import type { QuizQuestion, SubmitAnswerResult } from '../types/quiz';
 
 const COMMIT_DISTANCE = 80;
 const FLICK_VELOCITY = 300;
 const EXIT_X = 420;
 const FAV_THRESHOLD = 60;
 
+const CORRECT_FLY_DURATION_MS = 280;
+
+function typeLabel(type: string): string {
+  if (type === 'single_choice') return 'Choose one';
+  if (type === 'true_false') return 'True or False';
+  return type.replace(/_/g, ' ');
+}
+
 interface Props {
-  question: Question;
-  onResult: (correct: boolean) => void;
+  question: QuizQuestion;
+  onSubmitAnswer: (optionId: string) => Promise<SubmitAnswerResult>;
+  onAfterCorrect: () => void;
+  onIncorrect: (result: SubmitAnswerResult) => void;
   onFavorite: () => void;
   isFavorited?: boolean;
   shaking?: boolean;
 }
 
-const CORRECT_FLY_DURATION_MS = 280;
-
-export default function SwipeCard({ question, onResult, onFavorite, isFavorited = false, shaking = false }: Props) {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+export default function SwipeCard({
+  question,
+  onSubmitAnswer,
+  onAfterCorrect,
+  onIncorrect,
+  onFavorite,
+  isFavorited = false,
+  shaking = false,
+}: Props) {
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-12, 12]);
@@ -39,28 +56,11 @@ export default function SwipeCard({ question, onResult, onFavorite, isFavorited 
 
   const committed = useRef(false);
 
-  const canSubmit =
-    question.type === 'true_false' || selectedIndex !== null;
-
-  const evaluate = useCallback(
-    (direction: 'left' | 'right'): boolean => {
-      if (question.type === 'true_false') {
-        return (
-          (direction === 'right' && question.answer === true) ||
-          (direction === 'left' && question.answer === false)
-        );
-      }
-      if (question.options && selectedIndex !== null) {
-        return question.options[selectedIndex].correct;
-      }
-      return false;
-    },
-    [question, selectedIndex],
-  );
+  const canSubmit = selectedOptionId !== null && question.options.length > 0;
 
   const handleDragEnd = useCallback(
-    (_: unknown, info: PanInfo) => {
-      if (committed.current) return;
+    async (_: unknown, info: PanInfo) => {
+      if (committed.current || submitting) return;
 
       const dx = info.offset.x;
       const vx = info.velocity.x;
@@ -76,38 +76,49 @@ export default function SwipeCard({ question, onResult, onFavorite, isFavorited 
       const isFlick = Math.abs(vx) > FLICK_VELOCITY && Math.abs(dx) > 18;
       const isDistance = Math.abs(dx) > COMMIT_DISTANCE;
 
-      if (!canSubmit || (!isFlick && !isDistance)) {
+      if (!isFlick && !isDistance) {
+        animate(x, 0, { type: 'spring', stiffness: 500, damping: 30 });
+        animate(y, 0, { type: 'spring', stiffness: 500, damping: 30 });
+        return;
+      }
+
+      const direction = dx > 0 ? 'right' : 'left';
+      if (direction !== 'right' || !canSubmit) {
         animate(x, 0, { type: 'spring', stiffness: 500, damping: 30 });
         animate(y, 0, { type: 'spring', stiffness: 500, damping: 30 });
         return;
       }
 
       committed.current = true;
-      const direction = dx > 0 ? 'right' : 'left';
-      const correct = evaluate(direction);
-      const target = dx > 0 ? EXIT_X : -EXIT_X;
+      setSubmitting(true);
+      const target = EXIT_X;
 
-      if (correct) {
-        animate(x, target, {
-          duration: CORRECT_FLY_DURATION_MS / 1000,
-          ease: [0.25, 0.46, 0.45, 0.94],
-        }).then(() => onResult(true));
-      } else {
-        animate(x, 0, { type: 'spring', stiffness: 500, damping: 30 }).then(
-          () => {
-            committed.current = false;
-            onResult(false);
-          },
-        );
+      try {
+        const result = await onSubmitAnswer(selectedOptionId!);
+        if (result.is_correct) {
+          await animate(x, target, {
+            duration: CORRECT_FLY_DURATION_MS / 1000,
+            ease: [0.25, 0.46, 0.45, 0.94],
+          });
+          onAfterCorrect();
+        } else {
+          await animate(x, 0, { type: 'spring', stiffness: 500, damping: 30 });
+          onIncorrect(result);
+          committed.current = false;
+        }
+      } catch {
+        await animate(x, 0, { type: 'spring', stiffness: 500, damping: 30 });
+        committed.current = false;
+      } finally {
+        setSubmitting(false);
       }
       animate(y, 0, { type: 'spring', stiffness: 500, damping: 30 });
     },
-    [canSubmit, evaluate, onResult, onFavorite, x, y],
+    [canSubmit, onSubmitAnswer, onAfterCorrect, onIncorrect, onFavorite, selectedOptionId, submitting, x, y],
   );
 
   return (
     <div className="relative">
-      {/* Favorite indicator – floats above card during upward swipe */}
       <motion.div
         className="absolute -top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/90 shadow-lg"
         style={{ opacity: favIndicatorOpacity, scale: favIndicatorScale }}
@@ -121,19 +132,17 @@ export default function SwipeCard({ question, onResult, onFavorite, isFavorited 
       <motion.div
         className={`glass overflow-hidden rounded-[20px] shadow-2xl cursor-grab active:cursor-grabbing select-none ${shaking ? 'card-shake' : ''}`}
         style={{ x, y, rotate, opacity, touchAction: 'none' }}
-        drag
+        drag={!submitting}
         dragConstraints={{ left: 0, right: 0, top: -120, bottom: 0 }}
         dragElastic={{ left: 0.9, right: 0.9, top: 0.5, bottom: 0 }}
         onDragEnd={handleDragEnd}
       >
-        {/* Favorite badge on card */}
         {isFavorited && (
           <div className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-amber-500/90 flex items-center justify-center shadow-md">
             <i className="fas fa-bookmark text-white text-xs" />
           </div>
         )}
 
-        {/* Header image */}
         <div className="h-28 relative bg-gradient-to-br from-[#0f3460]/90 to-[#e94560]/50 flex items-center justify-center overflow-hidden">
           <img
             src="https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=680&q=80"
@@ -145,41 +154,32 @@ export default function SwipeCard({ question, onResult, onFavorite, isFavorited 
           <i className="fas fa-traffic-light text-3xl text-white/80 relative z-10 drop-shadow-lg" />
         </div>
 
-        {/* Body */}
         <div className="p-5">
-          <p className="text-white/60 text-xs uppercase tracking-wider mb-2">
-            {question.type === 'true_false' ? 'True or False' : 'Choose one'}
-          </p>
-          <p className="text-lg font-medium leading-snug text-white">
-            {question.statement}
-          </p>
+          <p className="text-white/60 text-xs uppercase tracking-wider mb-2">{typeLabel(question.type)}</p>
+          <p className="text-lg font-medium leading-snug text-white">{question.content}</p>
 
-          {question.type === 'true_false' ? (
-            <div className="flex gap-4 mt-6">
-              <span className="px-4 py-2 rounded-xl bg-red-500/20 text-red-200 text-sm font-medium">
-                False
-              </span>
-              <span className="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-200 text-sm font-medium">
-                True
-              </span>
-            </div>
+          {question.options.length === 0 ? (
+            <p className="text-white/60 text-sm mt-6">No options for this question.</p>
           ) : (
             <div className="flex flex-col gap-2 mt-6">
-              {question.options?.map((opt, i) => (
+              {question.options.map((opt) => (
                 <button
-                  key={i}
+                  key={opt.id}
+                  type="button"
+                  disabled={submitting}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSelectedIndex(i);
+                    setSelectedOptionId(opt.id);
                   }}
                   className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-colors text-white/90
                     ${
-                      selectedIndex === i
+                      selectedOptionId === opt.id
                         ? 'bg-white/15 ring-2 ring-[#e94560]'
                         : 'bg-white/10 border border-white/20 hover:bg-white/15'
                     }`}
                 >
+                  <span className="text-white/50 font-mono text-xs mr-2">{opt.id}.</span>
                   {opt.text}
                 </button>
               ))}
@@ -188,17 +188,16 @@ export default function SwipeCard({ question, onResult, onFavorite, isFavorited 
         </div>
       </motion.div>
 
-      {/* Hints below card */}
       <div className="flex items-center justify-center gap-6 mt-6 text-white/60 text-sm">
         <span>
           <i className="fas fa-arrow-left mr-1" />
-          {question.type === 'true_false' ? 'False' : 'Submit'}
+          —
         </span>
         <span>
           <i className="fas fa-arrow-up mr-1" /> Favorite
         </span>
         <span>
-          {question.type === 'true_false' ? 'True' : 'Submit'}
+          Submit
           <i className="fas fa-arrow-right ml-1" />
         </span>
       </div>

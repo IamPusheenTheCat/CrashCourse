@@ -127,14 +127,8 @@ export default function TutorialScreen() {
         >
           <i className="fas fa-sign-in-alt" /> Login
         </button>
-        <p className="text-white/60 text-sm mt-3">
-          New here?{' '}
-          <span
-            className="text-[#e94560] font-semibold cursor-pointer"
-            onClick={() => navigate('/signup')}
-          >
-            Sign up
-          </span>
+        <p className="text-white/55 text-xs mt-3 text-center max-w-[280px] leading-relaxed">
+          New here? Tap Login above — unregistered emails are signed up automatically on first sign-in.
         </p>
       </div>
     </div>

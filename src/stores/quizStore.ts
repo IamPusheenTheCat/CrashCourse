@@ -1,96 +1,161 @@
 import { create } from 'zustand';
-import { QUESTIONS, type Question } from '../data/questions';
+import type { QuizQuestion, SubmitAnswerResult } from '../types/quiz';
+import * as api from '../api/services';
 
-export interface AnswerRecord {
-  questionId: string;
-  correct: boolean;
+export type QuizSource = 'practice' | 'review_favorite' | 'review_mistake';
+
+function mapDetail(d: api.QuestionDetail): QuizQuestion {
+  return {
+    question_id: d.question_id,
+    content: d.content,
+    type: d.type,
+    options: d.options ?? [],
+    status: d.status ?? { is_favorited: false, is_mistake: false },
+  };
 }
 
 interface QuizState {
-  questions: Question[];
-  currentIndex: number;
+  source: QuizSource | null;
+  current: QuizQuestion | null;
+  loading: boolean;
+  error: string | null;
+  reviewIds: number[];
+  reviewIndex: number;
   streak: number;
-  answers: AnswerRecord[];
-  favoriteIds: Set<string>;
-  wrongIds: Set<string>;
 
-  submitAnswer: (questionId: string, correct: boolean) => void;
-  nextQuestion: () => void;
-  toggleFavorite: (questionId: string) => void;
-  resetSession: (questions?: Question[]) => void;
-  startReview: (mode: 'wrong' | 'favorite') => void;
+  startPractice: () => Promise<void>;
+  startReview: (mode: 'favorite' | 'mistake') => Promise<void>;
+  submitCurrent: (selectedOption: string) => Promise<SubmitAnswerResult>;
+  toggleFavorite: () => Promise<void>;
+  advanceAfterAnswer: () => Promise<void>;
+  clearQuiz: () => void;
 
-  get currentQuestion(): Question | null;
-  get progress(): number;
-  get totalCorrect(): number;
-  get totalWrong(): number;
-  get isDone(): boolean;
+  getReviewProgress: () => string;
 }
 
 export const useQuizStore = create<QuizState>((set, get) => ({
-  questions: QUESTIONS,
-  currentIndex: 0,
+  source: null,
+  current: null,
+  loading: false,
+  error: null,
+  reviewIds: [],
+  reviewIndex: 0,
   streak: 0,
-  answers: [],
-  favoriteIds: new Set(),
-  wrongIds: new Set(),
 
-  submitAnswer: (questionId, correct) =>
-    set((s) => {
-      const newWrongIds = new Set(s.wrongIds);
-      if (!correct) newWrongIds.add(questionId);
-      return {
-        answers: [...s.answers, { questionId, correct }],
-        streak: correct ? s.streak + 1 : 0,
-        wrongIds: newWrongIds,
-      };
-    }),
-
-  nextQuestion: () =>
-    set((s) => ({ currentIndex: s.currentIndex + 1 })),
-
-  toggleFavorite: (questionId) =>
-    set((s) => {
-      const next = new Set(s.favoriteIds);
-      if (next.has(questionId)) next.delete(questionId);
-      else next.add(questionId);
-      return { favoriteIds: next };
-    }),
-
-  resetSession: (questions) =>
+  clearQuiz: () =>
     set({
-      questions: questions ?? QUESTIONS,
-      currentIndex: 0,
+      source: null,
+      current: null,
+      loading: false,
+      error: null,
+      reviewIds: [],
+      reviewIndex: 0,
       streak: 0,
-      answers: [],
     }),
 
-  startReview: (mode) => {
-    const s = get();
-    const ids = mode === 'wrong' ? s.wrongIds : s.favoriteIds;
-    const subset = QUESTIONS.filter((q) => ids.has(q.id));
-    if (subset.length === 0) return;
-    set({ questions: subset, currentIndex: 0, streak: 0, answers: [] });
+  startPractice: async () => {
+    set({ loading: true, error: null, source: 'practice', reviewIds: [], reviewIndex: 0 });
+    try {
+      const detail = await api.getNextQuestion();
+      set({ current: mapDetail(detail), loading: false });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to load question';
+      set({ current: null, loading: false, error: msg });
+    }
   },
 
-  get currentQuestion() {
+  startReview: async (mode) => {
+    const source = mode === 'favorite' ? 'review_favorite' : 'review_mistake';
+    set({ loading: true, error: null, source, streak: 0 });
+    try {
+      const page = await (mode === 'favorite' ? api.getFavoriteList(1, 200) : api.getMistakeList(1, 200));
+      const ids = page.list.map((x) => x.question_id);
+      if (ids.length === 0) {
+        set({ current: null, reviewIds: [], reviewIndex: 0, loading: false, error: 'Nothing to review yet.' });
+        return;
+      }
+      const first = await api.getQuestionDetail(ids[0]);
+      set({
+        reviewIds: ids,
+        reviewIndex: 0,
+        current: mapDetail(first),
+        loading: false,
+        error: null,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to start review';
+      set({ current: null, reviewIds: [], loading: false, error: msg });
+    }
+  },
+
+  submitCurrent: async (selectedOption) => {
+    const q = get().current;
+    if (!q) throw new Error('No question loaded');
+    const data = await api.submitAnswer(q.question_id, selectedOption);
+    set((s) => ({
+      streak: data.is_correct ? s.streak + 1 : 0,
+    }));
+    return {
+      is_correct: data.is_correct,
+      correct_option: data.correct_option,
+      warning_video_url: data.warning_video_url ?? null,
+      explanation: data.explanation ?? '',
+    };
+  },
+
+  toggleFavorite: async () => {
+    const q = get().current;
+    if (!q) return;
+    const nextFav = !q.status.is_favorited;
+    if (nextFav) await api.addFavorite(q.question_id);
+    else await api.delFavorite(q.question_id);
+    set({
+      current: {
+        ...q,
+        status: { ...q.status, is_favorited: nextFav },
+      },
+    });
+  },
+
+  advanceAfterAnswer: async () => {
+    const { source, reviewIds, reviewIndex } = get();
+    if (!source) return;
+
+    if (source === 'practice') {
+      set({ loading: true, error: null });
+      try {
+        const detail = await api.getNextQuestion();
+        set({ current: mapDetail(detail), loading: false });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'No more questions';
+        set({ current: null, loading: false, error: msg });
+      }
+      return;
+    }
+
+    const nextIdx = reviewIndex + 1;
+    if (nextIdx >= reviewIds.length) {
+      set({ current: null, error: null });
+      return;
+    }
+    set({ loading: true, error: null });
+    try {
+      const detail = await api.getQuestionDetail(reviewIds[nextIdx]);
+      set({
+        current: mapDetail(detail),
+        reviewIndex: nextIdx,
+        loading: false,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to load question';
+      set({ loading: false, error: msg });
+    }
+  },
+
+  getReviewProgress: () => {
     const s = get();
-    return s.questions[s.currentIndex] ?? null;
-  },
-  get progress() {
-    const s = get();
-    return s.questions.length > 0
-      ? Math.round((s.currentIndex / s.questions.length) * 100)
-      : 0;
-  },
-  get totalCorrect() {
-    return get().answers.filter((a) => a.correct).length;
-  },
-  get totalWrong() {
-    return get().answers.filter((a) => !a.correct).length;
-  },
-  get isDone() {
-    const s = get();
-    return s.currentIndex >= s.questions.length;
+    if (s.source !== 'review_favorite' && s.source !== 'review_mistake') return '';
+    if (s.reviewIds.length === 0) return '';
+    return `${s.reviewIndex + 1} / ${s.reviewIds.length}`;
   },
 }));

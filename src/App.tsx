@@ -5,7 +5,6 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import AppShell from './components/AppShell';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginScreen from './screens/LoginScreen';
-import SignUpScreen from './screens/SignUpScreen';
 import TutorialScreen from './screens/TutorialScreen';
 import MenuScreen from './screens/MenuScreen';
 import QuizScreen from './screens/QuizScreen';
@@ -50,7 +49,7 @@ export default function App() {
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/login" element={<LoginScreen />} />
-            <Route path="/signup" element={<SignUpScreen />} />
+            <Route path="/signup" element={<Navigate to="/login" replace />} />
             <Route path="/tutorial" element={<TutorialScreen />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/menu" element={<MenuScreen />} />

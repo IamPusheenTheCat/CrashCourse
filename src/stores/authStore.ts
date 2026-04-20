@@ -1,20 +1,59 @@
 import { create } from 'zustand';
+import { getStoredToken, setStoredToken } from '../api/client';
+import * as api from '../api/services';
+import { useQuizStore } from './quizStore';
+
+const USER_ID_KEY = 'crashcourse-user-id';
+
+function readUserId(): number | null {
+  try {
+    const v = sessionStorage.getItem(USER_ID_KEY);
+    if (v == null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeUserId(id: number | null): void {
+  try {
+    if (id != null) sessionStorage.setItem(USER_ID_KEY, String(id));
+    else sessionStorage.removeItem(USER_ID_KEY);
+  } catch {
+    /* private mode */
+  }
+}
 
 interface AuthState {
+  token: string | null;
+  userId: number | null;
   isAuthenticated: boolean;
-  login: () => void;
-  logout: () => void;
+  loginWithEmailPassword: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
-/** 仅内存：关闭或刷新应用后需重新登录。不再写入 localStorage。 */
-try {
-  localStorage.removeItem('crashcourse-auth');
-} catch {
-  /* private mode / denied */
-}
+export const useAuthStore = create<AuthState>((set, get) => ({
+  token: getStoredToken(),
+  userId: readUserId(),
+  isAuthenticated: Boolean(getStoredToken()),
 
-export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: false,
-  login: () => set({ isAuthenticated: true }),
-  logout: () => set({ isAuthenticated: false }),
+  loginWithEmailPassword: async (email, password) => {
+    const data = await api.loginOrRegister(email, password);
+    setStoredToken(data.token);
+    writeUserId(data.user_id);
+    set({ token: data.token, userId: data.user_id, isAuthenticated: true });
+  },
+
+  logout: async () => {
+    try {
+      if (get().token) await api.logout();
+    } catch {
+      /* 仍清除本地态 */
+    }
+    setStoredToken(null);
+    writeUserId(null);
+    useQuizStore.getState().clearQuiz();
+    set({ token: null, userId: null, isAuthenticated: false });
+  },
 }));

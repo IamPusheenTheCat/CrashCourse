@@ -55,8 +55,10 @@ export default function SettingsScreen() {
         <button
           type="button"
           onClick={() => {
-            logout();
-            navigate('/login', { replace: true });
+            void (async () => {
+              await logout();
+              navigate('/login', { replace: true });
+            })();
           }}
           className="w-full py-4 rounded-xl border border-white/20 text-white/90 font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
         >

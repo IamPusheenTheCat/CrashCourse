@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 开发联调：允许 HTTP。生产环境请改为 HTTPS + 按域名收紧策略。 -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
