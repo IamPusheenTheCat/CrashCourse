@@ -1,12 +1,24 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
 import { TUTORIAL_SLIDES, getTutorialVideoUrl } from '../data/tutorialSlides';
+import { TUTORIAL_SEEN_KEY } from '../constants/storageKeys';
+import { TUTORIAL_LOGIN_FOOTNOTE } from '../constants/authCopy';
+
+function markTutorialSeen() {
+  try {
+    sessionStorage.setItem(TUTORIAL_SEEN_KEY, '1');
+  } catch {
+    /* private mode */
+  }
+}
 import './TutorialScreen.css';
 
 const SLIDES = TUTORIAL_SLIDES;
 
 export default function TutorialScreen() {
   const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [current, setCurrent] = useState(0);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const didEmitFirstFramePlayingRef = useRef(false);
@@ -105,10 +117,14 @@ export default function TutorialScreen() {
         </div>
       </div>
 
-      <div className="dot-indicators">
+      <div className="dot-indicators" role="tablist" aria-label="Tutorial slides">
         {SLIDES.map((_, i) => (
-          <span
+          <button
             key={i}
+            type="button"
+            role="tab"
+            aria-selected={i === current}
+            aria-label={`Slide ${i + 1} of ${SLIDES.length}`}
             className={`dot ${i === current ? 'active' : ''}`}
             onClick={() => goTo(i)}
           />
@@ -121,15 +137,39 @@ export default function TutorialScreen() {
       </div>
 
       <div className="flex flex-col items-center px-6 mt-4 w-full">
-        <button
-          onClick={() => navigate('/login')}
-          className="w-full max-w-[280px] py-3.5 rounded-xl bg-[#e94560] text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#e94560]/25 active:scale-[0.98] transition-transform"
-        >
-          <i className="fas fa-sign-in-alt" /> Login
-        </button>
-        <p className="text-white/55 text-xs mt-3 text-center max-w-[280px] leading-relaxed">
-          New here? Tap Login above — unregistered emails are signed up automatically on first sign-in.
-        </p>
+        {isAuthenticated ? (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                markTutorialSeen();
+                navigate('/menu', { replace: true });
+              }}
+              className="w-full max-w-[280px] py-3.5 rounded-xl bg-[#e94560] text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#e94560]/25 active:scale-[0.98] transition-transform"
+            >
+              <i className="fas fa-th-large" /> Continue to app
+            </button>
+            <p className="text-white/55 text-xs mt-3 text-center max-w-[280px] leading-relaxed">
+              You are signed in. Continue to the menu, or swipe above to re-watch the intro.
+            </p>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                markTutorialSeen();
+                navigate('/login');
+              }}
+              className="w-full max-w-[280px] py-3.5 rounded-xl bg-[#e94560] text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#e94560]/25 active:scale-[0.98] transition-transform"
+            >
+              <i className="fas fa-sign-in-alt" /> Login
+            </button>
+            <p className="text-white/55 text-xs mt-3 text-center max-w-[280px] leading-relaxed">
+              {TUTORIAL_LOGIN_FOOTNOTE}
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

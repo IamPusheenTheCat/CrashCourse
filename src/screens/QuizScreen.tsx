@@ -1,9 +1,11 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { goBackOrMenu } from '../navigation/goBackOrMenu';
 import { AnimatePresence, motion } from 'framer-motion';
 import SwipeCard from '../components/SwipeCard';
 import VideoOverlay from '../components/VideoOverlay';
 import { useQuizStore } from '../stores/quizStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import { useHideTab } from '../components/AppShell';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
@@ -25,6 +27,8 @@ export default function QuizScreen() {
   const advanceAfterAnswer = useQuizStore((s) => s.advanceAfterAnswer);
   const toggleFavorite = useQuizStore((s) => s.toggleFavorite);
   const getReviewProgress = useQuizStore((s) => s.getReviewProgress);
+  const startPractice = useQuizStore((s) => s.startPractice);
+  const videoAutoplayOnWrong = useSettingsStore((s) => s.videoAutoplayOnWrong);
 
   const hideTab = useHideTab();
 
@@ -40,7 +44,11 @@ export default function QuizScreen() {
 
   const isReview = source === 'review_favorite' || source === 'review_mistake';
   const reviewDone = isReview && !loading && !error && !current && reviewIds.length > 0;
-  const practiceIdle = !source && !current && !loading && !error;
+  const needsPracticeKickoff = !source && !current && !loading && !error;
+
+  useLayoutEffect(() => {
+    if (!source && !current && !loading && !error) void startPractice();
+  }, [source, current, loading, error, startPractice]);
 
   useEffect(() => {
     hideTab(wrongVideo !== null);
@@ -96,7 +104,7 @@ export default function QuizScreen() {
       const videoUrl = result.warning_video_url?.trim() || '';
       const openVideoAfterShake = () => {
         setShaking(false);
-        if (videoUrl) {
+        if (videoUrl && videoAutoplayOnWrong) {
           setWrongVideo({
             src: videoUrl,
             label: result.explanation?.trim() || `Correct answer: ${result.correct_option}`,
@@ -107,7 +115,7 @@ export default function QuizScreen() {
       };
       setTimeout(openVideoAfterShake, FEEDBACK_DURATION_MS);
     },
-    [isNative, runAdvance],
+    [isNative, runAdvance, videoAutoplayOnWrong],
   );
 
   const handleVideoContinue = useCallback(() => {
@@ -124,27 +132,21 @@ export default function QuizScreen() {
         Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
       }
       clearTimeout(favToastTimer.current);
-      setFavToast(!wasFav ? 'Saved to favorites' : 'Removed from favorites');
+      setFavToast(!wasFav ? 'Added to favorites' : 'Removed from favorites');
       favToastTimer.current = setTimeout(() => setFavToast(null), 1500);
     } catch {
       clearTimeout(favToastTimer.current);
-      setFavToast('Could not update favorite');
+      setFavToast('Could not update favorites');
       favToastTimer.current = setTimeout(() => setFavToast(null), 1500);
     }
   }, [current, toggleFavorite, isNative]);
 
-  if (practiceIdle) {
+  if (needsPracticeKickoff) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-160px)] px-4">
         <div className="glass p-8 rounded-2xl text-center max-w-[320px]">
-          <p className="text-white/80 text-sm">Open practice or review from the menu to load questions from the server.</p>
-          <button
-            type="button"
-            onClick={() => navigate('/menu')}
-            className="w-full mt-6 py-3.5 rounded-xl bg-[#e94560] text-white font-semibold"
-          >
-            Back to menu
-          </button>
+          <i className="fas fa-circle-notch fa-spin text-2xl text-[#e94560] mb-3" />
+          <p className="text-white/80 text-sm">Starting practice…</p>
         </div>
       </div>
     );
@@ -183,7 +185,7 @@ export default function QuizScreen() {
       <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-160px)] px-4">
         <div className="glass p-8 rounded-2xl text-center max-w-[320px]">
           <div className="w-16 h-16 rounded-2xl bg-emerald-500/30 flex items-center justify-center mx-auto mb-4">
-            <i className="fas fa-check-double text-3xl text-emerald-400" />
+            <i className="fas fa-circle-check text-3xl text-emerald-400" />
           </div>
           <h2 className="text-xl font-bold">Review complete</h2>
           <p className="text-white/80 text-sm mt-2">You have finished this review list.</p>
@@ -258,7 +260,7 @@ export default function QuizScreen() {
             transition={{ duration: 0.2 }}
           >
             <span className="inline-flex items-center gap-2 rounded-full bg-amber-500/90 px-5 py-2.5 text-white text-sm font-semibold shadow-lg">
-              <i className="fas fa-bookmark" />
+              <i className="fas fa-heart" />
               {favToast}
             </span>
           </motion.div>
@@ -270,15 +272,28 @@ export default function QuizScreen() {
           <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
-              onClick={() => navigate('/menu')}
+              onClick={() =>
+                source === 'practice' ? navigate('/menu') : goBackOrMenu(navigate)
+              }
               className="shrink-0 w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-white/90 active:scale-95 transition-transform"
-              aria-label="Back to home"
+              aria-label={source === 'practice' ? 'Back to menu' : 'Go back'}
             >
               <i className="fas fa-arrow-left" />
             </button>
-            <h1 className="text-lg font-semibold truncate">
-              {source === 'practice' ? 'Quiz' : source === 'review_mistake' ? 'Wrong book' : 'Favorites'}
-            </h1>
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold truncate">
+                {source === 'practice' ? 'Quiz' : source === 'review_mistake' ? 'Wrong book' : 'Favorites'}
+              </h1>
+              {source === 'practice' ? (
+                <p className="text-[10px] text-white/45 leading-snug mt-0.5 line-clamp-2">
+                  Smart order · Powered by Ebbinghaus Forgetting Curve
+                </p>
+              ) : isReview ? (
+                <p className="text-[11px] text-white/45 leading-snug mt-0.5 line-clamp-2">
+                  Wrong answers & favorites
+                </p>
+              ) : null}
+            </div>
           </div>
           <div className="flex items-center gap-2 text-white/80 text-sm shrink-0">
             <i className="fas fa-fire-alt" />
@@ -296,12 +311,18 @@ export default function QuizScreen() {
                 }}
                 transition={{ duration: 0.3 }}
               />
+            ) : source === 'practice' ? (
+              <motion.div
+                className="h-full w-full rounded-full bg-white/35"
+                animate={{ opacity: [0.25, 0.55, 0.25] }}
+                transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+              />
             ) : (
               <div className="h-full w-full rounded-full bg-white/10" />
             )}
           </div>
-          <span className="text-xs text-white/70 whitespace-nowrap">
-            {progressLabel ?? (source === 'practice' ? 'Next' : '—')}
+          <span className="text-xs text-white/70 whitespace-nowrap shrink-0">
+            {progressLabel ?? (source === 'practice' ? null : '—')}
           </span>
         </div>
 

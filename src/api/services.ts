@@ -139,6 +139,35 @@ export async function getMistakeList(page = 1, size = 50): Promise<PagedList> {
   return res.data;
 }
 
+const REVIEW_LIST_PAGE_SIZE = 200;
+/** 防止异常 total 导致死循环；200×250 = 最多 5 万条 id */
+const REVIEW_LIST_MAX_PAGES = 250;
+
+async function collectAllPagedQuestionIds(
+  fetchPage: (page: number, size: number) => Promise<PagedList>,
+): Promise<number[]> {
+  const ids: number[] = [];
+  let reportedTotal = Infinity;
+  for (let page = 1; page <= REVIEW_LIST_MAX_PAGES; page++) {
+    const data = await fetchPage(page, REVIEW_LIST_PAGE_SIZE);
+    if (page === 1) reportedTotal = data.total;
+    ids.push(...data.list.map((x) => x.question_id));
+    if (data.list.length === 0) break;
+    if (ids.length >= reportedTotal) break;
+  }
+  return ids;
+}
+
+/** 拉取错题本全部分页，合并为题目 id 列表（顺序与接口分页一致） */
+export async function fetchAllMistakeQuestionIds(): Promise<number[]> {
+  return collectAllPagedQuestionIds(getMistakeList);
+}
+
+/** 拉取收藏列表全部分页，合并为题目 id 列表 */
+export async function fetchAllFavoriteQuestionIds(): Promise<number[]> {
+  return collectAllPagedQuestionIds(getFavoriteList);
+}
+
 export async function delMistake(questionId: number): Promise<void> {
   const res = await apiRequest<ApiEnvelope<unknown>>('/mistakes/del_mistake', {
     method: 'POST',

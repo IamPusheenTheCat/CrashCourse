@@ -4,6 +4,9 @@ import * as api from '../api/services';
 
 export type QuizSource = 'practice' | 'review_favorite' | 'review_mistake';
 
+/** 防止 React Strict Mode 或快速重复点击导致并发 get_next */
+let practiceStartInFlight = false;
+
 function mapDetail(d: api.QuestionDetail): QuizQuestion {
   return {
     question_id: d.question_id,
@@ -54,13 +57,19 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     }),
 
   startPractice: async () => {
+    if (practiceStartInFlight) return;
+    practiceStartInFlight = true;
     set({ loading: true, error: null, source: 'practice', reviewIds: [], reviewIndex: 0 });
     try {
-      const detail = await api.getNextQuestion();
-      set({ current: mapDetail(detail), loading: false });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to load question';
-      set({ current: null, loading: false, error: msg });
+      try {
+        const detail = await api.getNextQuestion();
+        set({ current: mapDetail(detail), loading: false });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Failed to load question';
+        set({ current: null, loading: false, error: msg });
+      }
+    } finally {
+      practiceStartInFlight = false;
     }
   },
 
@@ -68,10 +77,21 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     const source = mode === 'favorite' ? 'review_favorite' : 'review_mistake';
     set({ loading: true, error: null, source, streak: 0 });
     try {
-      const page = await (mode === 'favorite' ? api.getFavoriteList(1, 200) : api.getMistakeList(1, 200));
-      const ids = page.list.map((x) => x.question_id);
+      const ids =
+        mode === 'favorite'
+          ? await api.fetchAllFavoriteQuestionIds()
+          : await api.fetchAllMistakeQuestionIds();
       if (ids.length === 0) {
-        set({ current: null, reviewIds: [], reviewIndex: 0, loading: false, error: 'Nothing to review yet.' });
+        set({
+          current: null,
+          reviewIds: [],
+          reviewIndex: 0,
+          loading: false,
+          error:
+            mode === 'favorite'
+              ? 'No favorites to review.'
+              : 'No mistakes to review.',
+        });
         return;
       }
       const first = await api.getQuestionDetail(ids[0]);

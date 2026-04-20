@@ -10,7 +10,7 @@ const items = [
     iconBg: 'bg-emerald-500/20',
     iconColor: 'text-emerald-400',
     title: 'Practice mode',
-    sub: 'No timer, learn at your pace',
+    sub: 'Powered by Ebbinghaus Forgetting Curve · smart question order',
   },
   {
     key: 'review',
@@ -18,7 +18,7 @@ const items = [
     iconBg: 'bg-[#e94560]/20',
     iconColor: 'text-[#e94560]',
     title: 'Start review',
-    sub: 'Wrong answers & favorites',
+    sub: 'Wrong answers & favorites · in order',
   },
   {
     key: 'settings',
@@ -39,6 +39,12 @@ export default function MenuScreen() {
   const handleTap = async (key: string) => {
     if (key === 'practice') {
       setPracticeError(null);
+      const { source, current } = useQuizStore.getState();
+      /** 回菜单未清 store：有进行中的练习则直接进入，避免 startPractice 换题 */
+      if (source === 'practice' && current != null) {
+        navigate('/quiz');
+        return;
+      }
       setPracticeLoading(true);
       try {
         await startPractice();

@@ -83,7 +83,7 @@ export default function SwipeCard({
       }
 
       const direction = dx > 0 ? 'right' : 'left';
-      if (direction !== 'right' || !canSubmit) {
+      if (!canSubmit) {
         animate(x, 0, { type: 'spring', stiffness: 500, damping: 30 });
         animate(y, 0, { type: 'spring', stiffness: 500, damping: 30 });
         return;
@@ -91,7 +91,7 @@ export default function SwipeCard({
 
       committed.current = true;
       setSubmitting(true);
-      const target = EXIT_X;
+      const target = direction === 'right' ? EXIT_X : -EXIT_X;
 
       try {
         const result = await onSubmitAnswer(selectedOptionId!);
@@ -123,9 +123,9 @@ export default function SwipeCard({
         className="absolute -top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/90 shadow-lg"
         style={{ opacity: favIndicatorOpacity, scale: favIndicatorScale }}
       >
-        <i className="fas fa-bookmark text-white text-sm" />
+        <i className="fas fa-heart text-white text-sm" />
         <span className="text-white text-sm font-semibold">
-          {isFavorited ? 'Unfavorite' : 'Favorite'}
+          {isFavorited ? 'Remove' : 'Favorite'}
         </span>
       </motion.div>
 
@@ -133,13 +133,13 @@ export default function SwipeCard({
         className={`glass overflow-hidden rounded-[20px] shadow-2xl cursor-grab active:cursor-grabbing select-none ${shaking ? 'card-shake' : ''}`}
         style={{ x, y, rotate, opacity, touchAction: 'none' }}
         drag={!submitting}
-        dragConstraints={{ left: 0, right: 0, top: -120, bottom: 0 }}
+        dragConstraints={{ left: -220, right: 220, top: -120, bottom: 0 }}
         dragElastic={{ left: 0.9, right: 0.9, top: 0.5, bottom: 0 }}
         onDragEnd={handleDragEnd}
       >
         {isFavorited && (
           <div className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-amber-500/90 flex items-center justify-center shadow-md">
-            <i className="fas fa-bookmark text-white text-xs" />
+            <i className="fas fa-heart text-white text-xs" />
           </div>
         )}
 
@@ -188,17 +188,13 @@ export default function SwipeCard({
         </div>
       </motion.div>
 
-      <div className="flex items-center justify-center gap-6 mt-6 text-white/60 text-sm">
+      <div className="flex items-center justify-center gap-8 mt-6 text-white/60 text-sm">
         <span>
-          <i className="fas fa-arrow-left mr-1" />
-          —
+          <i className="fas fa-arrows-alt-h mr-1" />
+          Submit
         </span>
         <span>
           <i className="fas fa-arrow-up mr-1" /> Favorite
-        </span>
-        <span>
-          Submit
-          <i className="fas fa-arrow-right ml-1" />
         </span>
       </div>
     </div>

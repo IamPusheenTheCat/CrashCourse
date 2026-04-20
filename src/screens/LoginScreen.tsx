@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import { FIRST_SIGN_IN_ACCOUNT_HINT } from '../constants/authCopy';
 
 export default function LoginScreen() {
   const navigate = useNavigate();
@@ -16,7 +17,8 @@ export default function LoginScreen() {
     if (isAuthenticated) navigate('/menu', { replace: true });
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
     setError(null);
     const trimmed = email.trim();
     if (!trimmed || !password) {
@@ -27,8 +29,8 @@ export default function LoginScreen() {
     try {
       await loginWithEmailPassword(trimmed, password);
       navigate('/menu');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Sign in failed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sign in failed');
     } finally {
       setLoading(false);
     }
@@ -44,22 +46,32 @@ export default function LoginScreen() {
         <p className="text-white/70 mt-2 text-sm">Learn the rules. Avoid the crash.</p>
       </div>
 
-      <div className="glass w-full max-w-[320px] p-6 rounded-2xl">
-        <label className="block text-sm font-medium text-white/90 mb-2">Email</label>
+      <form
+        className="glass w-full max-w-[320px] p-6 rounded-2xl"
+        onSubmit={(ev) => void handleSubmit(ev)}
+        noValidate
+      >
+        <label className="block text-sm font-medium text-white/90 mb-2" htmlFor="login-email">
+          Email
+        </label>
         <input
+          id="login-email"
           type="email"
           placeholder="you@example.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(ev) => setEmail(ev.target.value)}
           autoComplete="email"
           className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 mb-4"
         />
-        <label className="block text-sm font-medium text-white/90 mb-2">Password</label>
+        <label className="block text-sm font-medium text-white/90 mb-2" htmlFor="login-password">
+          Password
+        </label>
         <input
+          id="login-password"
           type="password"
           placeholder="••••••••"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(ev) => setPassword(ev.target.value)}
           autoComplete="current-password"
           className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 mb-4"
         />
@@ -72,18 +84,17 @@ export default function LoginScreen() {
           </p>
         ) : null}
         <button
-          type="button"
+          type="submit"
           disabled={loading}
-          onClick={() => void handleSubmit()}
           className="w-full py-3.5 rounded-xl bg-[#e94560] text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#e94560]/25 active:scale-[0.98] transition-transform disabled:opacity-60"
         >
-          {loading ? <i className="fas fa-circle-notch fa-spin" /> : <i className="fas fa-sign-in-alt" />}
+          {loading ? <i className="fas fa-circle-notch fa-spin" aria-hidden /> : <i className="fas fa-sign-in-alt" aria-hidden />}
           Sign in
         </button>
         <p className="text-center text-white/55 text-xs mt-4 leading-relaxed px-1">
-          If this email is not registered yet, your first sign-in will create your account automatically.
+          {FIRST_SIGN_IN_ACCOUNT_HINT}
         </p>
-      </div>
+      </form>
 
       <p className="text-white/50 text-xs mt-8 text-center max-w-[280px]">
         By continuing, you agree to our Terms and Privacy Policy.

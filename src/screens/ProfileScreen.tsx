@@ -1,20 +1,33 @@
 import { useCallback, useEffect, useState } from 'react';
 import GlassCard from '../components/GlassCard';
+import ReviewModeRow from '../components/ReviewModeRow';
 import { useNavigate } from 'react-router-dom';
 import * as api from '../api/services';
+import { useQuizStore } from '../stores/quizStore';
 
 export default function ProfileScreen() {
   const navigate = useNavigate();
+  const startReview = useQuizStore((s) => s.startReview);
   const [summary, setSummary] = useState<api.StatsSummary | null>(null);
+  const [mistakeBookTotal, setMistakeBookTotal] = useState<number | null>(null);
+  const [favoriteListTotal, setFavoriteListTotal] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reviewLaunching, setReviewLaunching] = useState<'mistake' | 'favorite' | null>(null);
+  const [reviewLaunchError, setReviewLaunchError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
     setLoading(true);
     try {
-      const data = await api.getStatsSummary();
-      setSummary(data);
+      const [stats, mistakes, favorites] = await Promise.all([
+        api.getStatsSummary(),
+        api.getMistakeList(1, 1),
+        api.getFavoriteList(1, 1),
+      ]);
+      setSummary(stats);
+      setMistakeBookTotal(mistakes.total);
+      setFavoriteListTotal(favorites.total);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load stats');
     } finally {
@@ -26,10 +39,28 @@ export default function ProfileScreen() {
     void load();
   }, [load]);
 
+  const startReviewFromProfile = async (mode: 'mistake' | 'favorite') => {
+    if (reviewLaunching) return;
+    if (mode === 'mistake' && mistakeBookTotal === 0) return;
+    if (mode === 'favorite' && favoriteListTotal === 0) return;
+    setReviewLaunchError(null);
+    setReviewLaunching(mode);
+    try {
+      await startReview(mode);
+      const err = useQuizStore.getState().error;
+      if (err) {
+        setReviewLaunchError(err);
+        return;
+      }
+      navigate('/quiz');
+    } finally {
+      setReviewLaunching(null);
+    }
+  };
+
   const totalAnswered = summary?.total_answered ?? 0;
   const totalCorrect = summary?.correct_count ?? 0;
   const totalWrong = summary?.incorrect_count ?? 0;
-  const favCount = summary?.favorite_count ?? 0;
   const progressFrac = summary?.learning_progress ?? 0;
   const pct =
     progressFrac <= 1 && progressFrac >= 0
@@ -50,7 +81,7 @@ export default function ProfileScreen() {
           </button>
           <div className="min-w-0">
             <h1 className="text-xl font-bold">Profile</h1>
-            <p className="text-white/70 text-sm mt-0.5">Your progress & saved items</p>
+            <p className="text-white/70 text-sm mt-0.5">Your progress & favorites</p>
           </div>
         </div>
       </header>
@@ -78,7 +109,7 @@ export default function ProfileScreen() {
             </GlassCard>
             <GlassCard className="p-4 text-center">
               <div className="text-2xl font-bold text-amber-400">{totalWrong}</div>
-              <div className="text-white/70 text-xs mt-1">Wrong</div>
+              <div className="text-white/70 text-xs mt-1">Incorrect</div>
             </GlassCard>
           </div>
 
@@ -100,46 +131,31 @@ export default function ProfileScreen() {
             </GlassCard>
           </section>
 
-          <section className="mb-6">
-            <h2 className="text-sm font-semibold text-white/90 mb-3 flex items-center gap-2">
-              <i className="fas fa-exclamation-circle text-amber-400" /> Wrong answers
-            </h2>
-            <GlassCard
-              className="p-4 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
-              onClick={() => navigate('/review')}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                  <i className="fas fa-list text-amber-400" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Review mistaken questions</p>
-                  <p className="text-white/60 text-xs">Open the review list from the server</p>
-                </div>
-              </div>
-              <i className="fas fa-chevron-right text-white/50" />
-            </GlassCard>
-          </section>
-
           <section>
             <h2 className="text-sm font-semibold text-white/90 mb-3 flex items-center gap-2">
-              <i className="fas fa-heart text-[#e94560]" /> Favorites
+              <i className="fas fa-redo text-white/80" /> Review
             </h2>
-            <GlassCard
-              className="p-4 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
-              onClick={() => navigate('/review')}
+            {reviewLaunchError ? (
+              <p className="text-amber-400 text-xs mb-2" role="alert">
+                {reviewLaunchError}
+              </p>
+            ) : null}
+            <div
+              className={`flex flex-col gap-3 ${reviewLaunching ? 'pointer-events-none opacity-70' : ''}`}
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#e94560]/20 flex items-center justify-center">
-                  <i className="fas fa-bookmark text-[#e94560]" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Saved questions</p>
-                  <p className="text-white/60 text-xs">{favCount} saved</p>
-                </div>
-              </div>
-              <i className="fas fa-chevron-right text-white/50" />
-            </GlassCard>
+              <ReviewModeRow
+                mode="wrong"
+                count={mistakeBookTotal}
+                busy={reviewLaunching === 'mistake'}
+                onClick={() => void startReviewFromProfile('mistake')}
+              />
+              <ReviewModeRow
+                mode="favorite"
+                count={favoriteListTotal}
+                busy={reviewLaunching === 'favorite'}
+                onClick={() => void startReviewFromProfile('favorite')}
+              />
+            </div>
           </section>
         </>
       )}
