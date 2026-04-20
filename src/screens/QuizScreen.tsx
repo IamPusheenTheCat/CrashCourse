@@ -214,7 +214,6 @@ export default function QuizScreen() {
             <i className="fas fa-circle-check text-3xl text-emerald-400" />
           </div>
           <h2 className="text-xl font-bold">Review complete</h2>
-          <p className="text-white/80 text-sm mt-2">You have finished this review list.</p>
           <button
             type="button"
             onClick={() => navigate('/menu')}
