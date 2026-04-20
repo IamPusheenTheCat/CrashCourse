@@ -6,6 +6,7 @@ import TabBar from './TabBar';
 const HideTabCtx = createContext<(hide: boolean) => void>(() => {});
 export const useHideTab = () => useContext(HideTabCtx);
 
+/** 仅 Quiz / Profile 显示底栏切换；主页与设置等用页内返回 / Done */
 const PAGES_WITH_TAB = ['/quiz', '/profile'];
 
 export default function AppShell() {

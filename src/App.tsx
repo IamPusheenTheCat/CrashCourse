@@ -3,7 +3,9 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import AppShell from './components/AppShell';
+import ProtectedRoute from './components/ProtectedRoute';
 import LoginScreen from './screens/LoginScreen';
+import SignUpScreen from './screens/SignUpScreen';
 import TutorialScreen from './screens/TutorialScreen';
 import MenuScreen from './screens/MenuScreen';
 import QuizScreen from './screens/QuizScreen';
@@ -48,12 +50,15 @@ export default function App() {
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/login" element={<LoginScreen />} />
+            <Route path="/signup" element={<SignUpScreen />} />
             <Route path="/tutorial" element={<TutorialScreen />} />
-            <Route path="/menu" element={<MenuScreen />} />
-            <Route path="/quiz" element={<QuizScreen />} />
-            <Route path="/review" element={<ReviewScreen />} />
-            <Route path="/profile" element={<ProfileScreen />} />
-            <Route path="/settings" element={<SettingsScreen />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/menu" element={<MenuScreen />} />
+              <Route path="/quiz" element={<QuizScreen />} />
+              <Route path="/review" element={<ReviewScreen />} />
+              <Route path="/profile" element={<ProfileScreen />} />
+              <Route path="/settings" element={<SettingsScreen />} />
+            </Route>
             <Route path="/" element={<Navigate to="/tutorial" replace />} />
             <Route path="*" element={<Navigate to="/tutorial" replace />} />
           </Route>

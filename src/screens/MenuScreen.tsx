@@ -72,16 +72,6 @@ export default function MenuScreen() {
           </GlassCard>
         ))}
       </div>
-
-      <p className="text-center text-white/50 text-xs mt-8">
-        Already have an account?{' '}
-        <span
-          className="text-[#e94560] cursor-pointer"
-          onClick={() => navigate('/login')}
-        >
-          Log in
-        </span>
-      </p>
     </div>
   );
 }

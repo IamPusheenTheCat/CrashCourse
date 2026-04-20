@@ -131,7 +131,7 @@ export default function TutorialScreen() {
           New here?{' '}
           <span
             className="text-[#e94560] font-semibold cursor-pointer"
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/signup')}
           >
             Sign up
           </span>

@@ -141,12 +141,22 @@ export default function QuizScreen() {
             <i className="fas fa-redo" /> Play again
           </button>
         </div>
-        <button
-          onClick={() => navigate('/profile')}
-          className="text-white/70 text-sm mt-6"
-        >
-          View profile
-        </button>
+        <div className="flex flex-col gap-3 mt-6 w-full max-w-[320px]">
+          <button
+            type="button"
+            onClick={() => navigate('/menu')}
+            className="w-full py-3 rounded-xl border border-white/25 text-white font-medium flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+          >
+            <i className="fas fa-arrow-left" /> Back to menu
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            className="text-white/70 text-sm"
+          >
+            View profile
+          </button>
+        </div>
       </div>
     );
   }
@@ -200,8 +210,18 @@ export default function QuizScreen() {
       </AnimatePresence>
 
       <div className="pt-2 pb-4">
-        <header className="flex items-center justify-between mb-4">
-          <h1 className="text-lg font-semibold">Quiz</h1>
+        <header className="flex items-center justify-between mb-4 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={() => navigate('/menu')}
+              className="shrink-0 w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-white/90 active:scale-95 transition-transform"
+              aria-label="Back to home"
+            >
+              <i className="fas fa-arrow-left" />
+            </button>
+            <h1 className="text-lg font-semibold truncate">Quiz</h1>
+          </div>
           <div className="flex items-center gap-2 text-white/80 text-sm">
             <i className="fas fa-fire-alt" />
             <span>{streak} streak</span>

@@ -16,10 +16,20 @@ export default function ReviewScreen() {
   return (
     <div className="pt-4 pb-10">
       <header className="mb-6">
-        <h1 className="text-xl font-bold">Review</h1>
-        <p className="text-white/70 text-sm mt-1">
-          Wrong answers & saved for later
-        </p>
+        <div className="flex items-center gap-2 mb-2">
+          <button
+            type="button"
+            onClick={() => navigate('/menu')}
+            className="shrink-0 w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-white/90 active:scale-95 transition-transform"
+            aria-label="Back to menu"
+          >
+            <i className="fas fa-arrow-left" />
+          </button>
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold">Review</h1>
+            <p className="text-white/70 text-sm mt-0.5">Wrong answers & saved for later</p>
+          </div>
+        </div>
       </header>
 
       <GlassCard className="p-4 mb-4">
@@ -66,12 +76,6 @@ export default function ReviewScreen() {
         <i className="fas fa-play" /> Start review session
       </button>
 
-      <button
-        onClick={() => navigate('/menu')}
-        className="block w-full text-center text-white/60 text-sm mt-6"
-      >
-        Back to menu
-      </button>
     </div>
   );
 }
