@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import PrimaryButton from './ui/PrimaryButton';
 
 /** 正确/错误反馈统一时长（ms）：Correct 停留、overlay 淡入淡出、抖动到打开视频的延迟 */
 export const FEEDBACK_DURATION_MS = 320;
@@ -42,7 +43,7 @@ export default function VideoOverlay({ videoSrc, label, onContinue }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[200] bg-[#1a1a2e] flex flex-col"
+      className="fixed inset-0 z-[200] bg-cc-surface flex flex-col"
       style={{ opacity: closing ? 0 : 1, transition: fadeTransition }}
     >
       {/* 预加载后淡入：同一元素先 load，loadeddata 后再显示并 play */}
@@ -63,12 +64,12 @@ export default function VideoOverlay({ videoSrc, label, onContinue }: Props) {
         />
       </div>
       {!isReady && (
-        <div className="absolute inset-0 bg-[#1a1a2e]" aria-hidden />
+        <div className="absolute inset-0 bg-cc-surface" aria-hidden />
       )}
 
       {/* 顶部警示框：top 考虑 safe area，避免刘海/岛屏遮挡 */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 z-10 text-center max-w-[calc(100vw-48px)] min-w-[140px] px-6 py-3 rounded-2xl border border-white/15 shadow-md"
+        className="absolute left-1/2 -translate-x-1/2 z-10 max-w-[calc(100vw-48px)] min-w-[140px] rounded-2xl border border-white/20 px-6 py-3 text-center shadow-md backdrop-blur-xl"
         style={{
           top: 'max(56px, calc(env(safe-area-inset-top, 0px) + 24px))',
           backgroundColor: 'rgba(139, 38, 53, 0.5)',
@@ -76,7 +77,7 @@ export default function VideoOverlay({ videoSrc, label, onContinue }: Props) {
           transition: fadeTransition,
         }}
       >
-        <p className="text-white/90 text-[11px] font-semibold uppercase tracking-widest">
+        <p className="text-cc-fg text-[11px] font-semibold uppercase tracking-widest">
           Warning
         </p>
         <p className="text-white font-bold mt-1.5 text-base break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
@@ -93,13 +94,14 @@ export default function VideoOverlay({ videoSrc, label, onContinue }: Props) {
           transition: fadeTransition,
         }}
       >
-        <button
+        <PrimaryButton
+          variant="accent"
           onClick={handleContinue}
           disabled={closing}
-          className="w-full h-14 rounded-2xl bg-[#e94560] text-white font-semibold text-lg flex items-center justify-center shadow-md active:scale-[0.98] transition-transform"
+          className="h-14 rounded-2xl py-0 text-lg shadow-md"
         >
           I Understand, Continue
-        </button>
+        </PrimaryButton>
       </div>
     </div>
   );

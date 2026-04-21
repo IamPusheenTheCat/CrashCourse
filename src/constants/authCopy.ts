@@ -1,6 +1,6 @@
 /** Login form + anywhere else we repeat the same rule */
 export const FIRST_SIGN_IN_ACCOUNT_HINT =
-  'New email? Your account is created on first sign-in.';
+  'New email? Your account is created the first time you sign in';
 
-/** Tutorial last slide, above the Login button */
-export const TUTORIAL_LOGIN_FOOTNOTE = `New here? Tap Login above. ${FIRST_SIGN_IN_ACCOUNT_HINT}`;
+/** Tutorial bottom, above Login（首登说明见登录页表单） */
+export const TUTORIAL_LOGIN_FOOTNOTE = 'New here? Tap Login above';

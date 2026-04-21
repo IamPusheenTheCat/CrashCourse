@@ -1,13 +1,46 @@
 @import "tailwindcss";
 
+/**
+ * 全局 UI token（尽量少档）：主色 + 底 + 正文/次要字色 + 线框 + 半透明底 + 进度条轨。
+ * 次要文案、说明、占位、图标灰统一用 cc-muted，不再细分多档字色。
+ */
+@theme {
+  --color-cc-accent: #e94560;
+  --color-cc-surface: #1a1a2e;
+  --color-cc-fg: rgba(255, 255, 255, 0.96);
+  --color-cc-muted: rgba(255, 255, 255, 0.58);
+  --color-cc-border: rgba(255, 255, 255, 0.14);
+  --color-cc-fill: rgba(255, 255, 255, 0.09);
+  --color-cc-track: rgba(255, 255, 255, 0.18);
+}
+
 /* ──────────────── Design tokens ──────────────── */
 :root {
   --glass-bg: rgba(255, 255, 255, 0.18);
   --glass-border: rgba(255, 255, 255, 0.35);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   --accent: #e94560;
+  /** 卡片 / 玻璃 / 教程视频框统一圆角 */
   --radius: 20px;
 }
+
+/** 二级页（Profile / Settings / Review）：统一上下边距 */
+.cc-page-inner {
+  padding-top: 1rem;
+  padding-bottom: 2.5rem;
+}
+
+/** 菜单首页：略松的顶距 */
+.cc-page-home {
+  padding-top: 2rem;
+  padding-bottom: 2.5rem;
+}
+
+/**
+ * 复用速查（Tailwind class）：
+ * cc-accent | cc-surface | cc-fg | cc-muted | cc-border | cc-fill | cc-track
+ * 圆角：卡片用 .glass（var(--radius)）；小控件 rounded-xl。
+ */
 
 * { box-sizing: border-box; }
 

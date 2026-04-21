@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import GlassCard from '../components/GlassCard';
+import ScreenHeader from '../components/ui/ScreenHeader';
+import ForgettingCurveIllustration from '../components/ForgettingCurveIllustration';
 import ReviewModeRow from '../components/ReviewModeRow';
 import { useNavigate } from 'react-router-dom';
 import * as api from '../api/services';
 import { useQuizStore } from '../stores/quizStore';
+import { useAuthStore } from '../stores/authStore';
 
 export default function ProfileScreen() {
   const navigate = useNavigate();
+  const userEmail = useAuthStore((s) => s.userEmail);
   const startReview = useQuizStore((s) => s.startReview);
   const [summary, setSummary] = useState<api.StatsSummary | null>(null);
   const [mistakeBookTotal, setMistakeBookTotal] = useState<number | null>(null);
@@ -68,23 +72,14 @@ export default function ProfileScreen() {
       : Math.round(progressFrac);
 
   return (
-    <div className="pt-4 pb-4">
-      <header className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <button
-            type="button"
-            onClick={() => navigate('/menu')}
-            className="shrink-0 w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-white/90 active:scale-95 transition-transform"
-            aria-label="Back to menu"
-          >
-            <i className="fas fa-arrow-left" />
-          </button>
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold">Profile</h1>
-            <p className="text-white/70 text-sm mt-0.5">Your progress & favorites</p>
-          </div>
-        </div>
-      </header>
+    <div className="cc-page-inner">
+      <ScreenHeader
+        title="Profile"
+        subtitle="Stats, progress & Ebbinghaus curve"
+        userEmail={userEmail}
+        onBack={() => navigate('/menu')}
+        backAriaLabel="Back to menu"
+      />
 
       {error ? (
         <p className="text-amber-400 text-xs mb-3" role="alert">
@@ -94,52 +89,54 @@ export default function ProfileScreen() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <i className="fas fa-circle-notch fa-spin text-2xl text-[#e94560]" />
+          <i className="fas fa-circle-notch fa-spin text-2xl text-cc-accent" />
         </div>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-3 mb-6">
             <GlassCard className="p-4 text-center">
-              <div className="text-2xl font-bold text-[#e94560]">{totalAnswered}</div>
-              <div className="text-white/70 text-xs mt-1">Answered</div>
+              <div className="text-2xl font-bold text-cc-accent">{totalAnswered}</div>
+              <div className="text-cc-muted text-xs mt-1">Answered</div>
             </GlassCard>
             <GlassCard className="p-4 text-center">
               <div className="text-2xl font-bold text-emerald-400">{totalCorrect}</div>
-              <div className="text-white/70 text-xs mt-1">Correct</div>
+              <div className="text-cc-muted text-xs mt-1">Correct</div>
             </GlassCard>
             <GlassCard className="p-4 text-center">
               <div className="text-2xl font-bold text-amber-400">{totalWrong}</div>
-              <div className="text-white/70 text-xs mt-1">Incorrect</div>
+              <div className="text-cc-muted text-xs mt-1">Incorrect</div>
             </GlassCard>
           </div>
 
-          <section className="mb-6">
-            <h2 className="text-sm font-semibold text-white/90 mb-3 flex items-center gap-2">
-              <i className="fas fa-chart-line" /> Learning progress
+          <section className="mb-8">
+            <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
+              <i className="fas fa-chart-line" aria-hidden /> Learning progress
             </h2>
             <GlassCard className="p-4">
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-white/80">Overall</span>
-                <span className="font-medium">{pct}%</span>
+                <span className="text-cc-muted">Overall</span>
+                <span className="font-medium text-cc-fg">{pct}%</span>
               </div>
-              <div className="h-2 rounded-full bg-white/20 overflow-hidden">
+              <div className="h-2 rounded-full bg-cc-track overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-[#e94560] transition-all"
+                  className="h-full rounded-full bg-cc-accent transition-all"
                   style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
                 />
               </div>
             </GlassCard>
           </section>
 
-          <section>
-            <h2 className="text-sm font-semibold text-white/90 mb-3 flex items-center gap-2">
-              <i className="fas fa-redo text-white/80" /> Review
+          {reviewLaunchError ? (
+            <p className="text-amber-400 text-xs mb-3" role="alert">
+              {reviewLaunchError}
+            </p>
+          ) : null}
+
+          <section className="mb-6">
+            <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
+              <i className="fas fa-list-ul text-cc-muted" aria-hidden />
+              Your lists
             </h2>
-            {reviewLaunchError ? (
-              <p className="text-amber-400 text-xs mb-2" role="alert">
-                {reviewLaunchError}
-              </p>
-            ) : null}
             <div
               className={`flex flex-col gap-3 ${reviewLaunching ? 'pointer-events-none opacity-70' : ''}`}
             >
@@ -156,6 +153,16 @@ export default function ProfileScreen() {
                 onClick={() => void startReviewFromProfile('favorite')}
               />
             </div>
+          </section>
+
+          <section>
+            <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
+              <i className="fas fa-chart-area text-emerald-400/90" aria-hidden />
+              Ebbinghaus Forgetting Curve
+            </h2>
+            <GlassCard className="p-4">
+              <ForgettingCurveIllustration />
+            </GlassCard>
           </section>
         </>
       )}

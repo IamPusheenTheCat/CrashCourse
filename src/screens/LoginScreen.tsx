@@ -1,10 +1,16 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { takeReauthFlashMessage } from '../auth/sessionInvalid';
 import { useAuthStore } from '../stores/authStore';
 import { FIRST_SIGN_IN_ACCOUNT_HINT } from '../constants/authCopy';
+import { markUserTutorialDone } from '../constants/storageKeys';
+import GlassCard from '../components/GlassCard';
+import PrimaryButton from '../components/ui/PrimaryButton';
+import { ccInputClass, ccLabelClass } from '../components/ui/formClasses';
 
 export default function LoginScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const loginWithEmailPassword = useAuthStore((s) => s.loginWithEmailPassword);
 
@@ -12,9 +18,20 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reauthBanner, setReauthBanner] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/menu', { replace: true });
+    const flash = takeReauthFlashMessage();
+    const fromState = (location.state as { reauthMessage?: string } | null)?.reauthMessage;
+    const msg = flash ?? fromState ?? null;
+    if (msg) setReauthBanner(msg);
+  }, [location.key, location.state]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const uid = useAuthStore.getState().userId;
+    if (uid != null) markUserTutorialDone(uid);
+    navigate('/menu', { replace: true });
   }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -22,13 +39,15 @@ export default function LoginScreen() {
     setError(null);
     const trimmed = email.trim();
     if (!trimmed || !password) {
-      setError('Please enter email and password.');
+      setError('Please enter email and password');
       return;
     }
     setLoading(true);
     try {
       await loginWithEmailPassword(trimmed, password);
-      navigate('/menu');
+      const uid = useAuthStore.getState().userId;
+      if (uid != null) markUserTutorialDone(uid);
+      navigate('/menu', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed');
     } finally {
@@ -40,65 +59,67 @@ export default function LoginScreen() {
     <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-44px)] pb-8">
       <div className="text-center mb-10">
         <div className="glass w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <i className="fas fa-car-crash text-4xl text-[#e94560]" />
+          <i className="fas fa-car-crash text-4xl text-cc-accent" />
         </div>
         <h1 className="text-3xl font-bold tracking-tight">CrashCourse</h1>
-        <p className="text-white/70 mt-2 text-sm">Learn the rules. Avoid the crash.</p>
+        <p className="text-cc-muted mt-2 text-sm">Learn the rules. Avoid the crash</p>
       </div>
 
-      <form
-        className="glass w-full max-w-[320px] p-6 rounded-2xl"
-        onSubmit={(ev) => void handleSubmit(ev)}
-        noValidate
-      >
-        <label className="block text-sm font-medium text-white/90 mb-2" htmlFor="login-email">
-          Email
-        </label>
-        <input
-          id="login-email"
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(ev) => setEmail(ev.target.value)}
-          autoComplete="email"
-          className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 mb-4"
-        />
-        <label className="block text-sm font-medium text-white/90 mb-2" htmlFor="login-password">
-          Password
-        </label>
-        <input
-          id="login-password"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(ev) => setPassword(ev.target.value)}
-          autoComplete="current-password"
-          className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 mb-4"
-        />
-        {error ? (
+      <GlassCard className="w-full max-w-[320px] p-6">
+        {reauthBanner ? (
           <p
-            className="text-amber-400 text-xs mb-4 leading-relaxed break-words whitespace-pre-wrap"
-            role="alert"
+            className="text-sky-200/95 text-xs mb-4 leading-relaxed rounded-xl border border-sky-400/25 bg-sky-500/10 px-3 py-2.5"
+            role="status"
           >
-            {error}
+            {reauthBanner}
           </p>
         ) : null}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3.5 rounded-xl bg-[#e94560] text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#e94560]/25 active:scale-[0.98] transition-transform disabled:opacity-60"
-        >
-          {loading ? <i className="fas fa-circle-notch fa-spin" aria-hidden /> : <i className="fas fa-sign-in-alt" aria-hidden />}
-          Sign in
-        </button>
-        <p className="text-center text-white/55 text-xs mt-4 leading-relaxed px-1">
-          {FIRST_SIGN_IN_ACCOUNT_HINT}
-        </p>
-      </form>
-
-      <p className="text-white/50 text-xs mt-8 text-center max-w-[280px]">
-        By continuing, you agree to our Terms and Privacy Policy.
-      </p>
+        <form onSubmit={(ev) => void handleSubmit(ev)} noValidate>
+          <label className={ccLabelClass} htmlFor="login-email">
+            Email
+          </label>
+          <input
+            id="login-email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(ev) => setEmail(ev.target.value)}
+            autoComplete="email"
+            className={ccInputClass}
+          />
+          <label className={ccLabelClass} htmlFor="login-password">
+            Password
+          </label>
+          <input
+            id="login-password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(ev) => setPassword(ev.target.value)}
+            autoComplete="current-password"
+            className={ccInputClass}
+          />
+          {error ? (
+            <p
+              className="text-amber-400 text-xs mb-4 leading-relaxed break-words whitespace-pre-wrap"
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
+          <PrimaryButton
+            type="submit"
+            variant="accent"
+            loading={loading}
+            icon={<i className="fas fa-sign-in-alt" aria-hidden />}
+          >
+            Sign in
+          </PrimaryButton>
+          <p className="text-center text-cc-muted text-xs mt-4 leading-relaxed px-1">
+            {FIRST_SIGN_IN_ACCOUNT_HINT}
+          </p>
+        </form>
+      </GlassCard>
     </div>
   );
 }

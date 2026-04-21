@@ -3,6 +3,8 @@ import { apiRequest, type ApiEnvelope } from './client';
 export interface LoginData {
   token: string;
   user_id: number;
+  /** 与 access 一并持久化：Web 为 localStorage；Capacitor 原生 refresh 存 Preferences */
+  refresh_token?: string;
 }
 
 /** 后端实际返回 access_token；接口文档示例为 token — 两者都认 */
@@ -25,7 +27,7 @@ export async function loginOrRegister(email: string, password: string): Promise<
   if (!token) {
     throw new Error(res.msg || 'Login failed: no access token in response');
   }
-  return { token, user_id: res.data.user_id };
+  return { token, user_id: res.data.user_id, refresh_token: res.data.refresh_token };
 }
 
 export async function logout(): Promise<void> {
@@ -48,16 +50,56 @@ export interface QuestionDetail {
   };
 }
 
-export async function getNextQuestion(): Promise<QuestionDetail> {
-  const res = await apiRequest<ApiEnvelope<QuestionDetail>>('/questions/get_next', {
+/** GET /questions/get_next 的 data 壳（题目在 question 内） */
+export interface GetNextQuestionData {
+  has_question: boolean;
+  question: QuestionDetail | null;
+  next_review_time?: string | null;
+}
+
+export interface AvailableQuestionsCountData {
+  available_questions_count: number;
+}
+
+/**
+ * GET /questions/get_available_count — 可做题目数量（仅展示用）。
+ * @param currentTimestamp ISO 8601，不传则使用服务器当前时间
+ */
+export async function getAvailableQuestionsCount(currentTimestamp?: string): Promise<number> {
+  const params = new URLSearchParams();
+  if (currentTimestamp) params.set('current_timestamp', currentTimestamp);
+  const qs = params.toString();
+  const path = qs ? `/questions/get_available_count?${qs}` : '/questions/get_available_count';
+  const res = await apiRequest<ApiEnvelope<AvailableQuestionsCountData>>(path, { method: 'GET' });
+  if (res.code !== 200 || res.data == null) {
+    throw new Error(res.msg || 'Failed to load available count');
+  }
+  const n = res.data.available_questions_count;
+  if (typeof n !== 'number' || !Number.isFinite(n)) {
+    throw new Error('Invalid available_questions_count');
+  }
+  return Math.max(0, Math.floor(n));
+}
+
+/** 完整解析 get_next（含无题时的 next_review_time），不抛「无题」错 */
+export async function getNextQuestionPayload(): Promise<GetNextQuestionData> {
+  const res = await apiRequest<ApiEnvelope<GetNextQuestionData>>('/questions/get_next', {
     method: 'GET',
   });
-  if (res.code !== 200 || !res.data) {
+  if (res.code !== 200 || res.data == null) {
     const m = res.msg?.trim();
     const vague = !m || m.toLowerCase() === 'success';
     throw new Error(vague ? 'No question available' : m);
   }
   return res.data;
+}
+
+export async function getNextQuestion(): Promise<QuestionDetail> {
+  const data = await getNextQuestionPayload();
+  if (!data.has_question || data.question == null) {
+    throw new Error('No question available');
+  }
+  return data.question;
 }
 
 export async function getQuestionDetail(questionId: number): Promise<QuestionDetail> {

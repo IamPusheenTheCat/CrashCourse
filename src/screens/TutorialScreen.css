@@ -2,7 +2,7 @@
   width: 100%;
   max-width: 280px;
   margin: 0 auto;
-  border-radius: 16px;
+  border-radius: var(--radius);
   overflow: hidden;
   position: relative;
 }
@@ -28,7 +28,7 @@
   aspect-ratio: 9 / 16;
   object-fit: cover;
   display: block;
-  border-radius: 16px;
+  border-radius: var(--radius);
 }
 
 .dot-indicators {
@@ -50,7 +50,7 @@
 }
 
 .dot.active {
-  background: #e94560;
+  background: var(--accent);
   transform: scale(1.2);
 }
 

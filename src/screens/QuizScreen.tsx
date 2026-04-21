@@ -11,6 +11,14 @@ import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { FEEDBACK_DURATION_MS } from '../components/VideoOverlay';
 import type { SubmitAnswerResult } from '../types/quiz';
+import { MISTAKE_LIST_RULE } from '../constants/reviewCopy';
+import {
+  PRACTICE_COMPLETE_HEADLINE,
+  PRACTICE_COMPLETE_SUBLINE,
+  PRACTICE_MODE_SUBTITLE,
+} from '../constants/practiceModeCopy';
+import PrimaryButton from '../components/ui/PrimaryButton';
+import QuizSessionHeader from '../components/ui/QuizSessionHeader';
 
 /** Pool empty / nothing to serve next — show “practice complete”, not a load failure */
 function isPracticeFinishedNoMore(message: string): boolean {
@@ -33,6 +41,9 @@ export default function QuizScreen() {
   const advanceAfterAnswer = useQuizStore((s) => s.advanceAfterAnswer);
   const toggleFavorite = useQuizStore((s) => s.toggleFavorite);
   const getReviewProgress = useQuizStore((s) => s.getReviewProgress);
+  const getPracticeProgress = useQuizStore((s) => s.getPracticeProgress);
+  const practiceSessionTotal = useQuizStore((s) => s.practiceSessionTotal);
+  const practiceProgressIndex = useQuizStore((s) => s.practiceProgressIndex);
   const startPractice = useQuizStore((s) => s.startPractice);
   const videoAutoplayOnWrong = useSettingsStore((s) => s.videoAutoplayOnWrong);
 
@@ -151,8 +162,8 @@ export default function QuizScreen() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-160px)] px-4">
         <div className="glass p-8 rounded-2xl text-center max-w-[320px]">
-          <i className="fas fa-circle-notch fa-spin text-2xl text-[#e94560] mb-3" />
-          <p className="text-white/80 text-sm">Starting practice…</p>
+          <i className="fas fa-circle-notch fa-spin text-2xl text-cc-accent mb-3" />
+          <p className="text-cc-muted text-sm">Starting practice…</p>
         </div>
       </div>
     );
@@ -162,8 +173,8 @@ export default function QuizScreen() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-160px)]">
         <div className="glass p-8 rounded-2xl text-center max-w-[320px]">
-          <i className="fas fa-circle-notch fa-spin text-2xl text-[#e94560] mb-3" />
-          <p className="text-white/80 text-sm">Loading…</p>
+          <i className="fas fa-circle-notch fa-spin text-2xl text-cc-accent mb-3" />
+          <p className="text-cc-muted text-sm">Loading…</p>
         </div>
       </div>
     );
@@ -179,7 +190,8 @@ export default function QuizScreen() {
               <div className="w-16 h-16 rounded-2xl bg-emerald-500/30 flex items-center justify-center mx-auto mb-4">
                 <i className="fas fa-circle-check text-3xl text-emerald-400" />
               </div>
-              <h2 className="text-xl font-bold text-white">Practice complete</h2>
+              <h2 className="text-xl font-bold text-white leading-snug">{PRACTICE_COMPLETE_HEADLINE}</h2>
+              <p className="text-cc-muted text-sm mt-2 leading-relaxed">{PRACTICE_COMPLETE_SUBLINE}</p>
             </>
           ) : (
             <>
@@ -187,20 +199,16 @@ export default function QuizScreen() {
                 <i className="fas fa-exclamation-circle text-2xl text-amber-400" />
               </div>
               <h2 className="text-lg font-bold text-white">Could not load practice</h2>
-              <p className="text-white/75 text-sm mt-2 leading-relaxed">{error}</p>
+              <p className="text-cc-muted text-sm mt-2 leading-relaxed">{error}</p>
             </>
           )}
-          <button
-            type="button"
+          <PrimaryButton
+            variant={finished ? 'accent' : 'outline'}
+            className="mt-6"
             onClick={() => navigate('/menu')}
-            className={`w-full mt-6 py-3.5 rounded-xl font-semibold active:scale-[0.98] transition-transform ${
-              finished
-                ? 'bg-[#e94560] text-white shadow-lg shadow-[#e94560]/25'
-                : 'border border-white/25 text-white'
-            }`}
           >
             Back to menu
-          </button>
+          </PrimaryButton>
         </div>
       </div>
     );
@@ -214,13 +222,9 @@ export default function QuizScreen() {
             <i className="fas fa-circle-check text-3xl text-emerald-400" />
           </div>
           <h2 className="text-xl font-bold">Review complete</h2>
-          <button
-            type="button"
-            onClick={() => navigate('/menu')}
-            className="w-full mt-6 py-3.5 rounded-xl bg-[#e94560] text-white font-semibold"
-          >
+          <PrimaryButton variant="accent" className="mt-6" onClick={() => navigate('/menu')}>
             Back to menu
-          </button>
+          </PrimaryButton>
         </div>
       </div>
     );
@@ -230,20 +234,16 @@ export default function QuizScreen() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-160px)] px-4">
         <div className="glass p-8 rounded-2xl text-center max-w-[320px]">
-          <p className="text-white/90 text-sm">{error}</p>
-          <button
-            type="button"
-            onClick={() => navigate('/review')}
-            className="w-full mt-6 py-3.5 rounded-xl bg-[#e94560] text-white font-semibold"
-          >
+          <p className="text-cc-fg text-sm">{error}</p>
+          <PrimaryButton variant="accent" className="mt-6" onClick={() => navigate('/review')}>
             Back to review
-          </button>
+          </PrimaryButton>
         </div>
       </div>
     );
   }
 
-  const progressLabel = isReview ? getReviewProgress() : null;
+  const progressLabel = isReview ? getReviewProgress() : source === 'practice' ? getPracticeProgress() : null;
 
   return (
     <>
@@ -258,13 +258,13 @@ export default function QuizScreen() {
       <AnimatePresence>
         {showCorrectOverlay && (
           <motion.div
-            className="fixed left-1/2 top-[18vh] z-[150] pointer-events-none -translate-x-1/2"
+            className="fixed left-1/2 top-[18vh] z-[150] w-max max-w-[min(100%,calc(100vw-2.5rem))] pointer-events-none -translate-x-1/2"
             initial={{ opacity: 0, scale: 0.88 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            <span className="inline-flex items-center gap-3 rounded-2xl bg-emerald-500 px-6 py-3.5 text-white text-lg font-bold shadow-lg">
+            <span className="inline-flex items-center gap-3 rounded-2xl border border-emerald-300/45 bg-emerald-500/80 px-6 py-3.5 text-lg font-bold text-white shadow-lg backdrop-blur-xl">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/25">
                 <i className="fas fa-check text-xl text-white" />
               </span>
@@ -278,76 +278,71 @@ export default function QuizScreen() {
         {favToast && (
           <motion.div
             key={favToast}
-            className="fixed left-1/2 bottom-[14vh] z-[150] pointer-events-none -translate-x-1/2"
+            className="fixed left-1/2 bottom-[14vh] z-[150] w-max max-w-[min(100%,calc(100vw-2.5rem))] pointer-events-none -translate-x-1/2"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
           >
-            <span className="inline-flex items-center gap-2 rounded-full bg-amber-500/90 px-5 py-2.5 text-white text-sm font-semibold shadow-lg">
-              <i className="fas fa-heart" />
-              {favToast}
+            <span className="inline-flex max-w-full items-center justify-center gap-2 rounded-full bg-cc-accent/90 px-5 py-2.5 text-center text-sm font-semibold text-white shadow-lg">
+              <i className="fas fa-heart shrink-0" />
+              <span className="min-w-0 whitespace-normal break-words">{favToast}</span>
             </span>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="pt-2 pb-4">
-        <header className="flex items-center justify-between mb-4 gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <button
-              type="button"
-              onClick={() =>
-                source === 'practice' ? navigate('/menu') : goBackOrMenu(navigate)
-              }
-              className="shrink-0 w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-white/90 active:scale-95 transition-transform"
-              aria-label={source === 'practice' ? 'Back to menu' : 'Go back'}
-            >
-              <i className="fas fa-arrow-left" />
-            </button>
-            <div className="min-w-0">
-              <h1 className="text-lg font-semibold truncate">
-                {source === 'practice' ? 'Quiz' : source === 'review_mistake' ? 'Wrong book' : 'Favorites'}
-              </h1>
-              {source === 'practice' ? (
-                <p className="text-[10px] text-white/45 leading-snug mt-0.5 line-clamp-2">
-                  Smart order · Powered by Ebbinghaus Forgetting Curve
-                </p>
-              ) : isReview ? (
-                <p className="text-[11px] text-white/45 leading-snug mt-0.5 line-clamp-2">
-                  Wrong answers & favorites
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-white/80 text-sm shrink-0">
-            <i className="fas fa-fire-alt" />
-            <span>{streak} streak</span>
-          </div>
-        </header>
+        <QuizSessionHeader
+          title={
+            source === 'practice' ? 'Quiz' : source === 'review_mistake' ? 'Wrong answers' : 'Favorites'
+          }
+          subtitle={
+            source === 'practice' ? (
+              <p className="line-clamp-2">{PRACTICE_MODE_SUBTITLE}</p>
+            ) : source === 'review_mistake' ? (
+              <p className="line-clamp-3">{MISTAKE_LIST_RULE}</p>
+            ) : isReview ? (
+              <p className="line-clamp-2">Saved favorites · fixed order</p>
+            ) : undefined
+          }
+          streak={streak}
+          onBack={() =>
+            source === 'practice' ? navigate('/menu') : goBackOrMenu(navigate)
+          }
+          backAriaLabel={source === 'practice' ? 'Back to menu' : 'Go back'}
+        />
 
         <div className="flex items-center gap-2 mb-6">
-          <div className="flex-1 h-1.5 rounded-full bg-white/20 overflow-hidden">
+          <div className="flex-1 h-1.5 rounded-full bg-cc-track overflow-hidden">
             {isReview && reviewIds.length > 0 ? (
               <motion.div
-                className="h-full rounded-full bg-[#e94560]"
+                className="h-full rounded-full bg-cc-accent"
                 animate={{
                   width: `${Math.round(((reviewIndex + 1) / reviewIds.length) * 100)}%`,
                 }}
                 transition={{ duration: 0.3 }}
               />
+            ) : source === 'practice' && practiceSessionTotal != null && practiceSessionTotal > 0 ? (
+              <motion.div
+                className="h-full rounded-full bg-emerald-500"
+                animate={{
+                  width: `${Math.round(((practiceProgressIndex + 1) / practiceSessionTotal) * 100)}%`,
+                }}
+                transition={{ duration: 0.3 }}
+              />
             ) : source === 'practice' ? (
               <motion.div
-                className="h-full w-full rounded-full bg-white/35"
+                className="h-full w-full rounded-full bg-cc-muted"
                 animate={{ opacity: [0.25, 0.55, 0.25] }}
                 transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
               />
             ) : (
-              <div className="h-full w-full rounded-full bg-white/10" />
+              <div className="h-full w-full rounded-full bg-cc-fill" />
             )}
           </div>
-          <span className="text-xs text-white/70 whitespace-nowrap shrink-0">
-            {progressLabel ?? (source === 'practice' ? null : '—')}
+          <span className="text-xs text-cc-muted whitespace-nowrap shrink-0">
+            {progressLabel || (source === 'practice' ? null : '—')}
           </span>
         </div>
 

@@ -1,17 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { TUTORIAL_SLIDES, getTutorialVideoUrl } from '../data/tutorialSlides';
-import { TUTORIAL_SEEN_KEY } from '../constants/storageKeys';
+import { markGuestTutorialIntroDone } from '../constants/storageKeys';
 import { TUTORIAL_LOGIN_FOOTNOTE } from '../constants/authCopy';
-
-function markTutorialSeen() {
-  try {
-    sessionStorage.setItem(TUTORIAL_SEEN_KEY, '1');
-  } catch {
-    /* private mode */
-  }
-}
+import PrimaryButton from '../components/ui/PrimaryButton';
 import './TutorialScreen.css';
 
 const SLIDES = TUTORIAL_SLIDES;
@@ -83,6 +76,10 @@ export default function TutorialScreen() {
   const onMouseMove = (e: React.MouseEvent) => handlePointerMove(e.clientX);
   const onMouseUp = handlePointerEnd;
 
+  if (isAuthenticated) {
+    return <Navigate to="/menu" replace />;
+  }
+
   return (
     <div className="tutorial-page -mx-5 px-0 flex flex-col items-center justify-center min-h-[calc(100dvh-44px)]"
       style={{ gap: 0 }}
@@ -137,39 +134,20 @@ export default function TutorialScreen() {
       </div>
 
       <div className="flex flex-col items-center px-6 mt-4 w-full">
-        {isAuthenticated ? (
-          <>
-            <button
-              type="button"
-              onClick={() => {
-                markTutorialSeen();
-                navigate('/menu', { replace: true });
-              }}
-              className="w-full max-w-[280px] py-3.5 rounded-xl bg-[#e94560] text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#e94560]/25 active:scale-[0.98] transition-transform"
-            >
-              <i className="fas fa-th-large" /> Continue to app
-            </button>
-            <p className="text-white/55 text-xs mt-3 text-center max-w-[280px] leading-relaxed">
-              You are signed in. Continue to the menu, or swipe above to re-watch the intro.
-            </p>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => {
-                markTutorialSeen();
-                navigate('/login');
-              }}
-              className="w-full max-w-[280px] py-3.5 rounded-xl bg-[#e94560] text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#e94560]/25 active:scale-[0.98] transition-transform"
-            >
-              <i className="fas fa-sign-in-alt" /> Login
-            </button>
-            <p className="text-white/55 text-xs mt-3 text-center max-w-[280px] leading-relaxed">
-              {TUTORIAL_LOGIN_FOOTNOTE}
-            </p>
-          </>
-        )}
+        <PrimaryButton
+          variant="accent"
+          className="max-w-[280px]"
+          icon={<i className="fas fa-sign-in-alt" aria-hidden />}
+          onClick={() => {
+            markGuestTutorialIntroDone();
+            navigate('/login');
+          }}
+        >
+          Login
+        </PrimaryButton>
+        <p className="text-cc-muted text-xs mt-3 text-center max-w-[280px] leading-relaxed">
+          {TUTORIAL_LOGIN_FOOTNOTE}
+        </p>
       </div>
     </div>
   );

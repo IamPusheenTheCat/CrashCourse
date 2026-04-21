@@ -6,14 +6,18 @@ import TabBar from './TabBar';
 const HideTabCtx = createContext<(hide: boolean) => void>(() => {});
 export const useHideTab = () => useContext(HideTabCtx);
 
-/** 仅 Quiz / Profile 显示底栏切换；主页与设置等用页内返回 / Done */
+/** Quiz 与从 Quiz 切到的 Profile 显示底栏；菜单直达 Profile 不显示（无 Quiz 上下文） */
 const PAGES_WITH_TAB = ['/quiz', '/profile'];
 
+type ProfileLocationState = { profileFromMenu?: boolean };
+
 export default function AppShell() {
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
   const [tabHidden, setTabHidden] = useState(false);
   const hideTab = useCallback((hide: boolean) => setTabHidden(hide), []);
-  const showTab = PAGES_WITH_TAB.includes(pathname) && !tabHidden;
+  const profileFromMenu =
+    pathname === '/profile' && (state as ProfileLocationState | null)?.profileFromMenu === true;
+  const showTab = PAGES_WITH_TAB.includes(pathname) && !tabHidden && !profileFromMenu;
 
   return (
     <HideTabCtx.Provider value={hideTab}>

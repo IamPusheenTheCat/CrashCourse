@@ -25,6 +25,10 @@ interface QuizState {
   reviewIds: number[];
   reviewIndex: number;
   streak: number;
+  /** 进入练习时 get_available_count，用于进度条；拉取失败则为 null（仍用脉冲条） */
+  practiceSessionTotal: number | null;
+  /** 当前为会话中第几题（0-based），与 reviewIndex 类似 */
+  practiceProgressIndex: number;
 
   startPractice: () => Promise<void>;
   startReview: (mode: 'favorite' | 'mistake') => Promise<void>;
@@ -34,6 +38,7 @@ interface QuizState {
   clearQuiz: () => void;
 
   getReviewProgress: () => string;
+  getPracticeProgress: () => string;
 }
 
 export const useQuizStore = create<QuizState>((set, get) => ({
@@ -44,6 +49,8 @@ export const useQuizStore = create<QuizState>((set, get) => ({
   reviewIds: [],
   reviewIndex: 0,
   streak: 0,
+  practiceSessionTotal: null,
+  practiceProgressIndex: 0,
 
   clearQuiz: () =>
     set({
@@ -54,19 +61,47 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       reviewIds: [],
       reviewIndex: 0,
       streak: 0,
+      practiceSessionTotal: null,
+      practiceProgressIndex: 0,
     }),
 
   startPractice: async () => {
     if (practiceStartInFlight) return;
     practiceStartInFlight = true;
-    set({ loading: true, error: null, source: 'practice', reviewIds: [], reviewIndex: 0 });
+    set({
+      loading: true,
+      error: null,
+      source: 'practice',
+      reviewIds: [],
+      reviewIndex: 0,
+      practiceProgressIndex: 0,
+      practiceSessionTotal: null,
+    });
     try {
+      let sessionTotal: number | null = null;
+      try {
+        const n = await api.getAvailableQuestionsCount();
+        sessionTotal = n > 0 ? n : null;
+      } catch {
+        sessionTotal = null;
+      }
       try {
         const detail = await api.getNextQuestion();
-        set({ current: mapDetail(detail), loading: false });
+        set({
+          current: mapDetail(detail),
+          loading: false,
+          practiceSessionTotal: sessionTotal,
+          practiceProgressIndex: 0,
+        });
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Failed to load question';
-        set({ current: null, loading: false, error: msg });
+        set({
+          current: null,
+          loading: false,
+          error: msg,
+          practiceSessionTotal: null,
+          practiceProgressIndex: 0,
+        });
       }
     } finally {
       practiceStartInFlight = false;
@@ -75,7 +110,14 @@ export const useQuizStore = create<QuizState>((set, get) => ({
 
   startReview: async (mode) => {
     const source = mode === 'favorite' ? 'review_favorite' : 'review_mistake';
-    set({ loading: true, error: null, source, streak: 0 });
+    set({
+      loading: true,
+      error: null,
+      source,
+      streak: 0,
+      practiceSessionTotal: null,
+      practiceProgressIndex: 0,
+    });
     try {
       const ids =
         mode === 'favorite'
@@ -89,8 +131,8 @@ export const useQuizStore = create<QuizState>((set, get) => ({
           loading: false,
           error:
             mode === 'favorite'
-              ? 'No favorites to review.'
-              : 'No mistakes to review.',
+              ? 'No favorites to review'
+              : 'No mistakes to review',
         });
         return;
       }
@@ -145,7 +187,29 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       set({ loading: true, error: null });
       try {
         const detail = await api.getNextQuestion();
-        set({ current: mapDetail(detail), loading: false });
+        /** 途中会有新题变 due：每次进下一题后重拉可做数量，分母用 max(新总数, 当前题序) 避免进度倒错 / 超 100% */
+        let freshCount = 0;
+        let countOk = false;
+        try {
+          freshCount = await api.getAvailableQuestionsCount();
+          countOk = true;
+        } catch {
+          /* 保留进入本段前的 practiceSessionTotal */
+        }
+        set((s) => {
+          const nextIdx = s.practiceProgressIndex + 1;
+          const nextTotal = countOk
+            ? Math.max(freshCount, nextIdx + 1)
+            : s.practiceSessionTotal != null && s.practiceSessionTotal > 0
+              ? Math.max(s.practiceSessionTotal, nextIdx + 1)
+              : s.practiceSessionTotal;
+          return {
+            current: mapDetail(detail),
+            loading: false,
+            practiceProgressIndex: nextIdx,
+            practiceSessionTotal: nextTotal,
+          };
+        });
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'No more questions';
         set({ current: null, loading: false, error: msg });
@@ -177,5 +241,13 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     if (s.source !== 'review_favorite' && s.source !== 'review_mistake') return '';
     if (s.reviewIds.length === 0) return '';
     return `${s.reviewIndex + 1} / ${s.reviewIds.length}`;
+  },
+
+  getPracticeProgress: () => {
+    const s = get();
+    if (s.source !== 'practice') return '';
+    const t = s.practiceSessionTotal;
+    if (t == null || t <= 0) return '';
+    return `${s.practiceProgressIndex + 1} / ${t}`;
   },
 }));

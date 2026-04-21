@@ -15,8 +15,16 @@ export default function StatusBar() {
   // Web/browser: fake status bar — show real local time (was hardcoded 9:41 like Apple marketing)
   useEffect(() => {
     if (Capacitor.isNativePlatform()) return;
-    const id = window.setInterval(() => setNow(new Date()), 30_000);
-    return () => window.clearInterval(id);
+    const tick = () => setNow(new Date());
+    const id = window.setInterval(tick, 1000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   // On a real device, iOS provides the real status bar — don't render a fake one

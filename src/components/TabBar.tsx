@@ -23,7 +23,7 @@ export default function TabBar() {
           to={t.to}
           className={({ isActive }) =>
             `flex-1 flex flex-col items-center justify-center py-2 text-[10px] font-medium transition-colors ${
-              isActive ? 'text-white' : 'text-white/70'
+              isActive ? 'text-cc-fg' : 'text-cc-muted'
             }`
           }
         >

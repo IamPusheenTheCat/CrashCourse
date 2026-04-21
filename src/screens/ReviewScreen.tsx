@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { goBackOrMenu } from '../navigation/goBackOrMenu';
 import { useQuizStore } from '../stores/quizStore';
 import GlassCard from '../components/GlassCard';
+import ScreenHeader from '../components/ui/ScreenHeader';
 import ReviewModeRow from '../components/ReviewModeRow';
 import * as api from '../api/services';
 
@@ -50,23 +51,13 @@ export default function ReviewScreen() {
   };
 
   return (
-    <div className="pt-4 pb-10">
-      <header className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <button
-            type="button"
-            onClick={() => goBackOrMenu(navigate)}
-            className="shrink-0 w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-white/90 active:scale-95 transition-transform"
-            aria-label="Go back"
-          >
-            <i className="fas fa-arrow-left" />
-          </button>
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold">Review</h1>
-            <p className="text-white/70 text-sm mt-0.5">Wrong answers & favorites</p>
-          </div>
-        </div>
-      </header>
+    <div className="cc-page-inner">
+      <ScreenHeader
+        title="Review"
+        subtitle="Wrong answers & favorites"
+        onBack={() => goBackOrMenu(navigate)}
+        backAriaLabel="Go back"
+      />
 
       {listError ? (
         <p className="text-amber-400 text-xs mb-3" role="alert">
@@ -75,8 +66,8 @@ export default function ReviewScreen() {
       ) : null}
 
       <GlassCard className="p-4 mb-4">
-        <p className="text-white/80 text-sm leading-relaxed">
-          Tap wrong answers or favorites below to start a session.
+        <p className="text-cc-muted text-sm leading-relaxed">
+          Tap wrong answers or favorites below to start a session
         </p>
       </GlassCard>
 

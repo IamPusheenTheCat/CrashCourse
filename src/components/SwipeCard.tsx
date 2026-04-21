@@ -120,7 +120,7 @@ export default function SwipeCard({
   return (
     <div className="relative">
       <motion.div
-        className="absolute -top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/90 shadow-lg"
+        className="absolute -top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex items-center gap-2 px-4 py-2 rounded-full bg-cc-accent/90 shadow-lg"
         style={{ opacity: favIndicatorOpacity, scale: favIndicatorScale }}
       >
         <i className="fas fa-heart text-white text-sm" />
@@ -138,7 +138,7 @@ export default function SwipeCard({
         onDragEnd={handleDragEnd}
       >
         {isFavorited && (
-          <div className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-amber-500/90 flex items-center justify-center shadow-md">
+          <div className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-cc-accent/90 flex items-center justify-center shadow-md">
             <i className="fas fa-heart text-white text-xs" />
           </div>
         )}
@@ -151,15 +151,15 @@ export default function SwipeCard({
             draggable={false}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-          <i className="fas fa-traffic-light text-3xl text-white/80 relative z-10 drop-shadow-lg" />
+          <i className="fas fa-traffic-light text-3xl text-cc-muted relative z-10 drop-shadow-lg" />
         </div>
 
         <div className="p-5">
-          <p className="text-white/60 text-xs uppercase tracking-wider mb-2">{typeLabel(question.type)}</p>
+          <p className="text-cc-muted text-xs uppercase tracking-wider mb-2">{typeLabel(question.type)}</p>
           <p className="text-lg font-medium leading-snug text-white">{question.content}</p>
 
           {question.options.length === 0 ? (
-            <p className="text-white/60 text-sm mt-6">No options for this question.</p>
+            <p className="text-cc-muted text-sm mt-6">No options for this question</p>
           ) : (
             <div className="flex flex-col gap-2 mt-6">
               {question.options.map((opt) => (
@@ -172,14 +172,14 @@ export default function SwipeCard({
                     e.stopPropagation();
                     setSelectedOptionId(opt.id);
                   }}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-colors text-white/90
+                  className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-colors text-cc-fg
                     ${
                       selectedOptionId === opt.id
-                        ? 'bg-white/15 ring-2 ring-[#e94560]'
+                        ? 'bg-white/15 ring-2 ring-cc-accent'
                         : 'bg-white/10 border border-white/20 hover:bg-white/15'
                     }`}
                 >
-                  <span className="text-white/50 font-mono text-xs mr-2">{opt.id}.</span>
+                  <span className="text-cc-muted font-mono text-xs mr-2">{opt.id}.</span>
                   {opt.text}
                 </button>
               ))}
@@ -188,7 +188,7 @@ export default function SwipeCard({
         </div>
       </motion.div>
 
-      <div className="flex items-center justify-center gap-8 mt-6 text-white/60 text-sm">
+      <div className="flex items-center justify-center gap-8 mt-6 text-cc-muted text-sm">
         <span>
           <i className="fas fa-arrows-alt-h mr-1" />
           Submit
