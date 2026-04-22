@@ -14,7 +14,7 @@ interface Props {
 
 const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-/** 错误反馈全屏：单 video 预加载，就绪后淡入并播放；点击 Continue 淡出后回调。iOS 用 loadedmetadata（loadeddata 常不触发），其它用 loadeddata。 */
+/** 错误反馈全屏：单 video 预加载，就绪后淡入并播放；Continue 立即回调（由上层在换题完成后再卸 overlay，避免内层淡出 + 实色底造成「全屏灭一下」）。 */
 export default function VideoOverlay({ videoSrc, label, onContinue }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
@@ -38,14 +38,13 @@ export default function VideoOverlay({ videoSrc, label, onContinue }: Props) {
   const handleContinue = () => {
     if (closing) return;
     setClosing(true);
-    setTimeout(() => onContinue(), FEEDBACK_DURATION_MS);
+    onContinue();
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[200] bg-cc-surface flex flex-col"
-      style={{ opacity: closing ? 0 : 1, transition: fadeTransition }}
-    >
+    <div className="fixed inset-0 z-[200] flex flex-col bg-cc-surface">
+      {/* 不在此做整层淡出：淡出时只剩实色底，会像全屏黑/闪一下；卸 overlay 时机交给上层 */}
+      <div className="absolute inset-0 flex flex-col">
       {/* 预加载后淡入：同一元素先 load，loadeddata 后再显示并 play */}
       <div
         className="absolute inset-0"
@@ -85,7 +84,7 @@ export default function VideoOverlay({ videoSrc, label, onContinue }: Props) {
         </p>
       </div>
 
-      {/* 底部按钮 */}
+      {/* 底部按钮：product tour 锚在按钮上，不把外层 safe-area padding 算进高亮 */}
       <div
         className="absolute bottom-0 left-0 right-0 z-10 px-5"
         style={{
@@ -95,6 +94,7 @@ export default function VideoOverlay({ videoSrc, label, onContinue }: Props) {
         }}
       >
         <PrimaryButton
+          data-product-tour="quiz-wrong-continue"
           variant="accent"
           onClick={handleContinue}
           disabled={closing}
@@ -102,6 +102,7 @@ export default function VideoOverlay({ videoSrc, label, onContinue }: Props) {
         >
           I Understand, Continue
         </PrimaryButton>
+      </div>
       </div>
     </div>
   );

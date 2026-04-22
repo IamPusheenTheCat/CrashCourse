@@ -2,8 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { takeReauthFlashMessage } from '../auth/sessionInvalid';
 import { useAuthStore } from '../stores/authStore';
-import { FIRST_SIGN_IN_ACCOUNT_HINT } from '../constants/authCopy';
-import { markUserTutorialDone } from '../constants/storageKeys';
+import {
+  FIRST_SIGN_IN_ACCOUNT_HINT,
+  LOGIN_EMAIL_PLACEHOLDER,
+  LOGIN_PASSWORD_PLACEHOLDER,
+} from '../constants/authCopy';
 import GlassCard from '../components/GlassCard';
 import PrimaryButton from '../components/ui/PrimaryButton';
 import { ccInputClass, ccLabelClass } from '../components/ui/formClasses';
@@ -29,8 +32,6 @@ export default function LoginScreen() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    const uid = useAuthStore.getState().userId;
-    if (uid != null) markUserTutorialDone(uid);
     navigate('/menu', { replace: true });
   }, [isAuthenticated, navigate]);
 
@@ -45,8 +46,6 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await loginWithEmailPassword(trimmed, password);
-      const uid = useAuthStore.getState().userId;
-      if (uid != null) markUserTutorialDone(uid);
       navigate('/menu', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed');
@@ -81,7 +80,7 @@ export default function LoginScreen() {
           <input
             id="login-email"
             type="email"
-            placeholder="you@example.com"
+            placeholder={LOGIN_EMAIL_PLACEHOLDER}
             value={email}
             onChange={(ev) => setEmail(ev.target.value)}
             autoComplete="email"
@@ -93,7 +92,7 @@ export default function LoginScreen() {
           <input
             id="login-password"
             type="password"
-            placeholder="••••••••"
+            placeholder={LOGIN_PASSWORD_PLACEHOLDER}
             value={password}
             onChange={(ev) => setPassword(ev.target.value)}
             autoComplete="current-password"

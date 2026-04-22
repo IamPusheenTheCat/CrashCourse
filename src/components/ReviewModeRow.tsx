@@ -69,8 +69,10 @@ export default function ReviewModeRow({ mode, count, busy, onClick }: Props) {
       onKeyDown={onKeyDown}
     >
       <div
-        className={`w-11 h-11 shrink-0 rounded-xl border border-cc-border flex items-center justify-center ${
-          mode === 'wrong' ? 'bg-amber-500/25' : 'bg-cc-accent/25'
+        className={`w-11 h-11 shrink-0 rounded-xl border flex items-center justify-center ${
+          mode === 'wrong'
+            ? 'border-amber-400/25 bg-amber-500/20'
+            : 'border-cc-border bg-cc-accent/25'
         }`}
       >
         {busy ? (
@@ -80,9 +82,9 @@ export default function ReviewModeRow({ mode, count, busy, onClick }: Props) {
             }`}
           />
         ) : mode === 'wrong' ? (
-          <i className="fas fa-exclamation-circle text-amber-400" />
+          <i className="fas fa-circle-xmark text-lg text-amber-400" aria-hidden />
         ) : (
-          <i className="fas fa-heart text-cc-accent" />
+          <i className="fas fa-heart text-cc-accent" aria-hidden />
         )}
       </div>
       <div className="flex-1 min-w-0">

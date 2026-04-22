@@ -39,6 +39,16 @@ export async function logout(): Promise<void> {
   }
 }
 
+/** DELETE /auth/me — 永久注销当前登录账号（需 Bearer） */
+export async function deleteMyAccount(): Promise<void> {
+  const res = await apiRequest<ApiEnvelope<unknown>>('/auth/me', {
+    method: 'DELETE',
+  });
+  if (res.code !== 200) {
+    throw new Error(res.msg || 'Failed to delete account');
+  }
+}
+
 export interface QuestionDetail {
   question_id: number;
   content: string;

@@ -12,6 +12,8 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchAutoHide: false,
       launchShowDuration: 0,
+      /** Android 12+ 系统启动图淡出（与 main 里 SplashScreen.hide 配合） */
+      launchFadeOutDuration: 240,
     },
   },
 };

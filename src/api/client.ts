@@ -3,7 +3,10 @@ import { getRefreshTokenSync, persistRefreshToken } from '../auth/refreshTokenSt
 
 const TOKEN_KEY = 'crashcourse-token';
 
-let refreshInFlight: Promise<boolean> | null = null;
+/** refresh 结果：成功 / 服务端拒绝 / 网络或暂态错误（不应据此清本地会话） */
+type RefreshAttempt = 'ok' | 'rejected' | 'transient';
+
+let refreshInFlight: Promise<RefreshAttempt> | null = null;
 
 /** access 在过期前多久（毫秒）尝试用 refresh 续期 */
 const ACCESS_REFRESH_LEEWAY_MS = 120_000;
@@ -137,34 +140,45 @@ async function ensureAccessTokenFresh(pathNorm: string): Promise<void> {
   if (getRefreshTokenSync() == null) return;
   const expired = now >= expMs;
   if (!expired && now - lastProactiveRefreshAt < PROACTIVE_REFRESH_COOLDOWN_MS) return;
-  const ok = await tryRefreshAccessToken();
-  if (ok || !expired) lastProactiveRefreshAt = Date.now();
+  const r = await tryRefreshAccessTokenDeduped();
+  if (r === 'ok' || !expired) lastProactiveRefreshAt = Date.now();
 }
 
-async function tryRefreshAccessToken(): Promise<boolean> {
+async function tryRefreshAccessTokenDeduped(): Promise<RefreshAttempt> {
   if (refreshInFlight) return refreshInFlight;
-  const rt = getRefreshTokenSync();
-  if (!rt) return false;
-  refreshInFlight = (async (): Promise<boolean> => {
+  refreshInFlight = (async (): Promise<RefreshAttempt> => {
     try {
+      const rt = getRefreshTokenSync();
+      if (!rt) return 'rejected';
+
       const url = `${getApiBase()}/auth/refresh`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: rt }),
-      });
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: rt }),
+        });
+      } catch {
+        return 'transient';
+      }
+
       const raw = await parseJson(res);
-      if (!res.ok) return false;
+      if (!res.ok) {
+        if (res.status >= 500) return 'transient';
+        return 'rejected';
+      }
+
       const env = raw as ApiEnvelope<{ access_token?: string; token?: string }>;
-      if (typeof env !== 'object' || env === null || env.code !== 200 || !env.data) return false;
+      if (typeof env !== 'object' || env === null || env.code !== 200 || !env.data) return 'rejected';
       const access = env.data.access_token ?? env.data.token;
-      if (!access) return false;
+      if (!access) return 'rejected';
       setStoredToken(access);
       const { useAuthStore } = await import('../stores/authStore');
       useAuthStore.getState().rehydrateToken();
-      return true;
+      return 'ok';
     } catch {
-      return false;
+      return 'transient';
     } finally {
       refreshInFlight = null;
     }
@@ -175,6 +189,51 @@ async function tryRefreshAccessToken(): Promise<boolean> {
 async function clearSessionAfterRefreshFailure(): Promise<void> {
   const { useAuthStore } = await import('../stores/authStore');
   await useAuthStore.getState().clearLocalSession({ notifyReauth: true });
+}
+
+/**
+ * 冷启动同步清会话：本地曾有登录态但 refresh 被拒或 access 已死且无救。
+ * 与手动 Logout 区分：被动退出时写入 reauth flash，登录页显示「会话已过期」蓝条。
+ */
+async function clearSessionAfterStartupSyncFailure(): Promise<void> {
+  const { useAuthStore } = await import('../stores/authStore');
+  await useAuthStore.getState().clearLocalSession({ notifyReauth: true });
+}
+
+/**
+ * 在 React 首帧之前调用（见 main.tsx）。
+ * 避免：本地仍有 access JWT → 路由进菜单 → 首包 401/续期失败 → 清会话跳登录，造成「先闪菜单再登录」。
+ */
+export async function runStartupAuthSync(): Promise<void> {
+  const token = getStoredToken();
+  /** 仅有 refresh、access 丢失时（异常存储）仍尝试续期，避免误判未登录 */
+  if (!token && getRefreshTokenSync() != null) {
+    const r = await tryRefreshAccessTokenDeduped();
+    if (r === 'rejected') await clearSessionAfterStartupSyncFailure();
+    return;
+  }
+  if (!token) return;
+
+  const expMs = decodeJwtExpMs(token);
+  const now = Date.now();
+  const inRefreshWindow = expMs != null && now >= expMs - ACCESS_REFRESH_LEEWAY_MS;
+  if (!inRefreshWindow) return;
+
+  const rt = getRefreshTokenSync();
+  if (rt == null) {
+    if (expMs != null && now >= expMs) {
+      await clearSessionAfterStartupSyncFailure();
+    }
+    return;
+  }
+
+  const expired = expMs != null && now >= expMs;
+  if (!expired && now - lastProactiveRefreshAt < PROACTIVE_REFRESH_COOLDOWN_MS) return;
+
+  const r = await tryRefreshAccessTokenDeduped();
+  if (r === 'ok' || !expired) lastProactiveRefreshAt = Date.now();
+  /** 仅服务端明确拒绝 refresh 时才清会话；网络/5xx 保留令牌，进菜单后再续期 */
+  if (r === 'rejected' && expired) await clearSessionAfterStartupSyncFailure();
 }
 
 export interface ApiEnvelope<T> {
@@ -250,8 +309,14 @@ export async function apiRequest<T>(
       !isAuthPublicPath(normPath) &&
       getRefreshTokenSync() != null
     ) {
-      const renewed = await tryRefreshAccessToken();
-      if (renewed) continue;
+      const rr = await tryRefreshAccessTokenDeduped();
+      if (rr === 'ok') continue;
+      if (rr === 'transient') {
+        throw new ApiError(
+          `Could not reach the server to refresh your session.${apiBaseHintForErrors()}`,
+          0,
+        );
+      }
       await clearSessionAfterRefreshFailure();
     }
 

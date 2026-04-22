@@ -8,6 +8,69 @@ import * as api from '../api/services';
 import { useQuizStore } from '../stores/quizStore';
 import { useAuthStore } from '../stores/authStore';
 
+const skBar = 'rounded-md bg-cc-fill motion-safe:animate-pulse';
+
+/** 与加载完成后的版式对齐，避免整页从「单转圈」切成大块内容时的跳动 */
+function ProfileLoadingSkeleton() {
+  return (
+    <div aria-busy aria-label="Loading profile">
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {[0, 1, 2].map((i) => (
+          <GlassCard key={i} className="p-4 text-center">
+            <div className={`mx-auto h-8 w-14 ${skBar}`} />
+            <div className={`mx-auto mt-3 h-3 w-20 max-w-full ${skBar}`} />
+          </GlassCard>
+        ))}
+      </div>
+
+      <section className="mb-8">
+        <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
+          <i className="fas fa-chart-line text-cc-muted" aria-hidden />
+          Learning progress
+        </h2>
+        <GlassCard className="p-4">
+          <div className="flex justify-between text-sm mb-2">
+            <span className={`inline-block h-4 w-16 ${skBar}`} />
+            <span className={`inline-block h-4 w-10 ${skBar}`} />
+          </div>
+          <div className={`h-2 w-full rounded-full ${skBar}`} />
+        </GlassCard>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
+          <i className="fas fa-list-ul text-cc-muted" aria-hidden />
+          Your lists
+        </h2>
+        <div className="flex flex-col gap-3">
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className="flex min-h-[4.5rem] items-center gap-3 rounded-2xl border border-cc-border bg-cc-fill/35 p-4 motion-safe:animate-pulse"
+            >
+              <div className="h-11 w-11 shrink-0 rounded-xl bg-white/12" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-4 w-40 max-w-full rounded-md bg-white/14" />
+                <div className="h-3 w-full max-w-[14rem] rounded-md bg-white/10" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
+          <i className="fas fa-chart-area text-emerald-400/90" aria-hidden />
+          Ebbinghaus Forgetting Curve
+        </h2>
+        <GlassCard className="p-4">
+          <div className={`h-44 w-full rounded-xl ${skBar}`} />
+        </GlassCard>
+      </section>
+    </div>
+  );
+}
+
 export default function ProfileScreen() {
   const navigate = useNavigate();
   const userEmail = useAuthStore((s) => s.userEmail);
@@ -88,9 +151,7 @@ export default function ProfileScreen() {
       ) : null}
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <i className="fas fa-circle-notch fa-spin text-2xl text-cc-accent" />
-        </div>
+        <ProfileLoadingSkeleton />
       ) : (
         <>
           <div className="grid grid-cols-3 gap-3 mb-6">

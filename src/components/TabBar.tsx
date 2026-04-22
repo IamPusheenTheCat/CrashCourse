@@ -7,7 +7,9 @@ const tabs = [
 
 export default function TabBar() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-start justify-center"
+    <nav
+      data-product-tour="shell-tabs"
+      className="fixed bottom-0 left-0 right-0 z-50 flex items-start justify-center"
       style={{
         height: 'calc(64px + env(safe-area-inset-bottom, 24px))',
         paddingBottom: 'env(safe-area-inset-bottom, 24px)',

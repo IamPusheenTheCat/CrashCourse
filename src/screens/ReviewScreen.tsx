@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { goBackOrMenu } from '../navigation/goBackOrMenu';
 import { useQuizStore } from '../stores/quizStore';
 import GlassCard from '../components/GlassCard';
 import ScreenHeader from '../components/ui/ScreenHeader';
@@ -55,7 +54,7 @@ export default function ReviewScreen() {
       <ScreenHeader
         title="Review"
         subtitle="Wrong answers & favorites"
-        onBack={() => goBackOrMenu(navigate)}
+        onBack={() => navigate('/menu')}
         backAriaLabel="Go back"
       />
 

@@ -118,13 +118,13 @@ export default function SwipeCard({
   );
 
   return (
-    <div className="relative">
+    <div className="relative" data-product-tour="quiz-card">
       <motion.div
-        className="absolute -top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex items-center gap-2 px-4 py-2 rounded-full bg-cc-accent/90 shadow-lg"
+        className="absolute -top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex items-center gap-2 rounded-full border border-white/35 bg-cc-accent/45 px-4 py-2 shadow-lg backdrop-blur-xl"
         style={{ opacity: favIndicatorOpacity, scale: favIndicatorScale }}
       >
-        <i className="fas fa-heart text-white text-sm" />
-        <span className="text-white text-sm font-semibold">
+        <i className="fas fa-heart text-white text-sm" aria-hidden />
+        <span className="text-sm font-semibold text-white">
           {isFavorited ? 'Remove' : 'Favorite'}
         </span>
       </motion.div>
@@ -138,8 +138,11 @@ export default function SwipeCard({
         onDragEnd={handleDragEnd}
       >
         {isFavorited && (
-          <div className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-cc-accent/90 flex items-center justify-center shadow-md">
-            <i className="fas fa-heart text-white text-xs" />
+          <div
+            className="absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/35 bg-cc-accent/45 shadow-md backdrop-blur-xl"
+            title="In your favorites"
+          >
+            <i className="fas fa-heart text-white text-xs" aria-hidden />
           </div>
         )}
 

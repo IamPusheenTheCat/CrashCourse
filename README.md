@@ -102,7 +102,6 @@ src/
 │   ├── TabBar.tsx           # Bottom navigation
 │   └── GlassCard.tsx        # Reusable glass panel
 ├── screens/
-│   ├── TutorialScreen.tsx   # Onboarding carousel
 │   ├── LoginScreen.tsx
 │   ├── MenuScreen.tsx       # Practice / Review / Settings
 │   ├── QuizScreen.tsx       # Main quiz loop
@@ -110,8 +109,10 @@ src/
 │   ├── ProfileScreen.tsx
 │   └── SettingsScreen.tsx
 public/
-└── tutorialVideos/          # Onboarding demo videos (local). Wrong-answer videos come from API `warning_video_url` (e.g. Supabase Storage).
+└── vite.svg                   # other static assets as needed
 ```
+
+Wrong-answer full-screen videos use the API field `warning_video_url` (e.g. Supabase Storage), not files under `public/`.
 
 ## For Teammates
 

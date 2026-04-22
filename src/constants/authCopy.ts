@@ -2,5 +2,7 @@
 export const FIRST_SIGN_IN_ACCOUNT_HINT =
   'New email? Your account is created the first time you sign in';
 
-/** Tutorial bottom, above Login（首登说明见登录页表单） */
-export const TUTORIAL_LOGIN_FOOTNOTE = 'New here? Tap Login above';
+/** 常见登录页：邮箱用示例格式，密码用简短动作提示 */
+export const LOGIN_EMAIL_PLACEHOLDER = 'you@example.com';
+
+export const LOGIN_PASSWORD_PLACEHOLDER = 'Enter password';

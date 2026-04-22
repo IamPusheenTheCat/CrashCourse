@@ -11,6 +11,8 @@ import {
 } from '../constants/practiceModeCopy';
 import EbbinghausCurveBadge from '../components/EbbinghausCurveBadge';
 import PracticeDueStat from '../components/PracticeDueStat';
+import ProductTourOverlay, { type ProductTourStep } from '../components/ProductTourOverlay';
+import { markMenuProductTourDone, readMenuProductTourDone } from '../constants/productTourStorage';
 
 const items = [
   {
@@ -47,11 +49,33 @@ const items = [
   },
 ] as const;
 
+const MENU_TOUR_STEPS: ProductTourStep[] = [
+  {
+    selector: '[data-product-tour="menu-practice"]',
+    title: 'Practice mode',
+    body: 'Jump in here for the next good questions, served in a smart order inspired by the forgetting curve. The ring tells you how many are ready now — or gently counts down when you are caught up.',
+    inflate: 10,
+  },
+  {
+    selector: '[data-product-tour="menu-review"]',
+    title: 'Start review',
+    body: 'Review what you saved or missed: mistakes and favorites stay in the same list order every time.',
+    inflate: 10,
+  },
+  {
+    selector: '[data-product-tour="menu-profile"]',
+    title: 'Profile',
+    body: 'Your home for the big picture: practice volume, right vs wrong, and how far you have moved the needle. You can also hop into mistake or favorite review from here.',
+    inflate: 10,
+  },
+];
+
 type PracticeFeedback = { variant: 'neutral' | 'error'; message: string };
 
 export default function MenuScreen() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const userId = useAuthStore((s) => s.userId);
   const userEmail = useAuthStore((s) => s.userEmail);
   const startPractice = useQuizStore((s) => s.startPractice);
   const [practiceFeedback, setPracticeFeedback] = useState<PracticeFeedback | null>(null);
@@ -59,6 +83,18 @@ export default function MenuScreen() {
   const [availableCount, setAvailableCount] = useState<number | null>(null);
   const [availableCountLoading, setAvailableCountLoading] = useState(true);
   const [nextReviewAt, setNextReviewAt] = useState<string | null>(null);
+  const [menuTourOpen, setMenuTourOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || userId == null) return;
+    if (readMenuProductTourDone(userId)) return;
+    const tid = window.setTimeout(() => setMenuTourOpen(true), 380);
+    return () => window.clearTimeout(tid);
+  }, [isAuthenticated, userId]);
+
+  useEffect(() => {
+    if (practiceFeedback != null) setMenuTourOpen(false);
+  }, [practiceFeedback]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -225,6 +261,13 @@ export default function MenuScreen() {
             key={item.key}
             className="py-3 px-4 flex items-center gap-2.5 sm:gap-4 cursor-pointer active:scale-[0.98] transition-transform"
             onClick={() => void handleTap(item.key)}
+            {...(item.key === 'practice'
+              ? { 'data-product-tour': 'menu-practice' }
+              : item.key === 'review'
+                ? { 'data-product-tour': 'menu-review' }
+                : item.key === 'profile'
+                  ? { 'data-product-tour': 'menu-profile' }
+                  : {})}
           >
             <div className={`w-12 h-12 rounded-xl ${item.iconBg} flex items-center justify-center`}>
               {item.key === 'practice' && practiceLoading ? (
@@ -260,6 +303,17 @@ export default function MenuScreen() {
           </GlassCard>
         ))}
       </div>
+
+      <ProductTourOverlay
+        open={menuTourOpen && practiceFeedback == null}
+        steps={MENU_TOUR_STEPS}
+        bottomInsetPx={24}
+        onClose={() => setMenuTourOpen(false)}
+        onComplete={() => {
+          if (userId != null) markMenuProductTourDone(userId);
+          setMenuTourOpen(false);
+        }}
+      />
     </div>
   );
 }
