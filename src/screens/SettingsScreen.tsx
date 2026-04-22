@@ -96,7 +96,7 @@ export default function SettingsScreen() {
           </PrimaryButton>
         ) : (
           <GlassCard className="rounded-2xl p-4">
-            <p className="text-sm text-cc-muted leading-relaxed text-center">
+            <p className="text-sm font-medium text-red-300 leading-relaxed text-center">
               This permanently deletes your account and associated data — you will need to sign up again to use the app
             </p>
             {deleteError ? (
