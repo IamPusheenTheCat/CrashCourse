@@ -147,7 +147,7 @@ export async function addFavorite(questionId: number): Promise<void> {
     json: { question_id: questionId },
   });
   if (res.code !== 200) {
-    throw new Error(res.msg || 'Favorite failed');
+    throw new Error(res.msg || 'Could not save question');
   }
 }
 
@@ -157,7 +157,7 @@ export async function delFavorite(questionId: number): Promise<void> {
     json: { question_id: questionId },
   });
   if (res.code !== 200) {
-    throw new Error(res.msg || 'Unfavorite failed');
+    throw new Error(res.msg || 'Could not remove from saved');
   }
 }
 
@@ -177,7 +177,7 @@ export async function getFavoriteList(page = 1, size = 50): Promise<PagedList> {
     { method: 'GET' },
   );
   if (res.code !== 200 || !res.data) {
-    throw new Error(res.msg || 'Failed to load favorites');
+    throw new Error(res.msg || 'Failed to load saved questions');
   }
   return res.data;
 }

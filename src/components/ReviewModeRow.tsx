@@ -5,7 +5,7 @@ export type ReviewRowMode = 'wrong' | 'favorite';
 
 function rowTitle(mode: ReviewRowMode, count: number | null): string {
   const n = count === null ? '…' : String(count);
-  return mode === 'wrong' ? `Wrong answers (${n})` : `Favorites (${n})`;
+  return mode === 'wrong' ? `Wrong answers (${n})` : `Saved questions (${n})`;
 }
 
 type RowSubtitle =
@@ -23,7 +23,7 @@ function rowSubtitle(mode: ReviewRowMode, count: number | null): RowSubtitle {
         };
   }
   return count === 0
-    ? { layout: 'single', text: 'No saved favorites yet' }
+    ? { layout: 'single', text: 'No saved questions yet' }
     : {
         layout: 'stacked',
         primary: 'Review in fixed order',
@@ -84,7 +84,7 @@ export default function ReviewModeRow({ mode, count, busy, onClick }: Props) {
         ) : mode === 'wrong' ? (
           <i className="fas fa-circle-xmark text-lg text-amber-400" aria-hidden />
         ) : (
-          <i className="fas fa-heart text-cc-accent" aria-hidden />
+          <i className="fas fa-bookmark text-cc-accent" aria-hidden />
         )}
       </div>
       <div className="flex-1 min-w-0">

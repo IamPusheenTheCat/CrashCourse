@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuizStore } from '../stores/quizStore';
 import { useAuthStore } from '../stores/authStore';
 import { getAvailableQuestionsCount, getNextQuestionPayload } from '../api/services';
+import BrandCarCrashIcon from '../components/BrandCarCrashIcon';
 import GlassCard from '../components/GlassCard';
 import {
   PRACTICE_MENU_NOTHING_TO_PRACTICE,
@@ -29,7 +30,7 @@ const items = [
     iconBg: 'bg-cc-accent/20',
     iconColor: 'text-cc-accent',
     title: 'Start review',
-    sub: 'Wrong answers & favorites · in order',
+    sub: 'Wrong answers & saved questions · in order',
   },
   {
     key: 'profile',
@@ -37,7 +38,7 @@ const items = [
     iconBg: 'bg-sky-500/20',
     iconColor: 'text-sky-300',
     title: 'Profile',
-    sub: 'Stats, progress & Ebbinghaus curve',
+    sub: 'Stats, lists & forgetting curve',
   },
   {
     key: 'settings',
@@ -59,13 +60,13 @@ const MENU_TOUR_STEPS: ProductTourStep[] = [
   {
     selector: '[data-product-tour="menu-review"]',
     title: 'Start review',
-    body: 'Review what you saved or missed: mistakes and favorites stay in the same list order every time.',
+    body: 'Review what you saved or missed: mistakes and saved questions stay in the same list order every time.',
     inflate: 10,
   },
   {
     selector: '[data-product-tour="menu-profile"]',
     title: 'Profile',
-    body: 'Your home for the big picture: practice volume, right vs wrong, and how far you have moved the needle. You can also hop into mistake or favorite review from here.',
+    body: 'Your home for the big picture: practice volume, right vs wrong, and how far you have moved the needle. You can also jump into review for wrong answers or saved questions from here.',
     inflate: 10,
   },
 ];
@@ -226,7 +227,7 @@ export default function MenuScreen() {
     <div className="cc-page-home">
       <div className="text-center mb-8">
         <div className="glass w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3">
-          <i className="fas fa-car-crash text-2xl text-cc-accent" />
+          <BrandCarCrashIcon className="h-7 w-7 object-contain" />
         </div>
         <h1 className="text-2xl font-bold">CrashCourse</h1>
         {userEmail ? (

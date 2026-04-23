@@ -135,7 +135,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
           loading: false,
           error:
             mode === 'favorite'
-              ? 'No favorites to review'
+              ? 'No saved questions to review'
               : 'No mistakes to review',
         });
         return;

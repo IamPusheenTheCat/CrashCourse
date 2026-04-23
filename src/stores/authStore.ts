@@ -8,7 +8,6 @@ import {
   writePersistedAuthField,
 } from '../api/client';
 import * as api from '../api/services';
-import { setReauthFlashMessage } from '../auth/sessionInvalid';
 import { useQuizStore } from './quizStore';
 
 const USER_ID_KEY = 'crashcourse-user-id';
@@ -46,11 +45,8 @@ interface AuthState {
   deleteAccount: () => Promise<void>;
   /** access 续期后从 localStorage 同步到 store（由 api/client 调用） */
   rehydrateToken: () => void;
-  /**
-   * 仅清本地态，不调后端（refresh 失败或令牌作废时由 client 调用）。
-   * `notifyReauth: true`：被动退出，登录页显示「Your session expired…」蓝条；手动 Logout / 删号应传 false。
-   */
-  clearLocalSession: (opts?: { notifyReauth?: boolean }) => Promise<void>;
+  /** 仅清本地态，不调后端（refresh 失败或令牌作废时由 client 调用） */
+  clearLocalSession: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -74,10 +70,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ token: t, isAuthenticated: Boolean(t) });
   },
 
-  clearLocalSession: async (opts) => {
-    if (opts?.notifyReauth) {
-      setReauthFlashMessage();
-    }
+  clearLocalSession: async () => {
     await clearStoredAuthTokens();
     writeUserId(null);
     writeUserEmail(null);
@@ -91,11 +84,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       /* 仍清除本地态 */
     }
-    await get().clearLocalSession({ notifyReauth: false });
+    await get().clearLocalSession();
   },
 
   deleteAccount: async () => {
     await api.deleteMyAccount();
-    await get().clearLocalSession({ notifyReauth: false });
+    await get().clearLocalSession();
   },
 }));

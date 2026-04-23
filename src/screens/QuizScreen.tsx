@@ -6,7 +6,6 @@ import VideoOverlay from '../components/VideoOverlay';
 import { useQuizStore } from '../stores/quizStore';
 import { useAuthStore } from '../stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
-import { useHideTab } from '../components/AppShell';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { FEEDBACK_DURATION_MS } from '../components/VideoOverlay';
@@ -55,15 +54,9 @@ const QUIZ_TOUR_STEPS: ProductTourStep[] = [
   },
   {
     selector: '[data-product-tour="quiz-card"]',
-    title: 'Tap and swipe',
-    body: 'Tap a choice on the card to select your answer. Swipe left or right to submit; swipe up to toggle favorite.',
+    title: 'Swipe to answer',
+    body: 'Swipe right for True or left for False. Swipe up to save the question.',
     inflate: 12,
-  },
-  {
-    selector: '[data-product-tour="shell-tabs"]',
-    title: 'Bottom navigation',
-    body: 'Hop between the quiz you are in and Profile.',
-    inflate: 0,
   },
 ];
 
@@ -98,7 +91,6 @@ export default function QuizScreen() {
   const clearQuiz = useQuizStore((s) => s.clearQuiz);
   const videoAutoplayOnWrong = useSettingsStore((s) => s.videoAutoplayOnWrong);
 
-  const hideTab = useHideTab();
   const userId = useAuthStore((s) => s.userId);
 
   const [wrongVideo, setWrongVideo] = useState<{
@@ -126,10 +118,6 @@ export default function QuizScreen() {
   useLayoutEffect(() => {
     if (!source && !current && !loading && !error) void startPractice();
   }, [source, current, loading, error, startPractice]);
-
-  useEffect(() => {
-    hideTab(wrongVideo !== null);
-  }, [wrongVideo, hideTab]);
 
   const quizTourEligible =
     userId != null &&
@@ -255,11 +243,11 @@ export default function QuizScreen() {
         Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
       }
       clearTimeout(favToastTimer.current);
-      setFavToast(!wasFav ? 'Added to favorites' : 'Removed from favorites');
+      setFavToast(!wasFav ? 'Added to saved questions' : 'Removed from saved questions');
       favToastTimer.current = setTimeout(() => setFavToast(null), 1500);
     } catch {
       clearTimeout(favToastTimer.current);
-      setFavToast('Could not update favorites');
+      setFavToast('Could not update saved questions');
       favToastTimer.current = setTimeout(() => setFavToast(null), 1500);
     }
   }, [current, toggleFavorite, isNative]);
@@ -358,6 +346,7 @@ export default function QuizScreen() {
           videoSrc={wrongVideo.src}
           label={wrongVideo.label}
           onContinue={handleVideoContinue}
+          suppressContinueKeyboard={wrongVideoTourOpen}
         />
       )}
 
@@ -391,7 +380,7 @@ export default function QuizScreen() {
             transition={{ duration: 0.2 }}
           >
             <span className="inline-flex max-w-full items-center justify-center gap-2 rounded-2xl border border-white/35 bg-cc-accent/45 px-5 py-2.5 text-center text-sm font-semibold text-white shadow-lg backdrop-blur-xl">
-              <i className="fas fa-heart shrink-0 text-white" aria-hidden />
+              <i className="fas fa-bookmark shrink-0 text-white" aria-hidden />
               <span className="min-w-0 whitespace-normal break-words">{favToast}</span>
             </span>
           </motion.div>
@@ -401,7 +390,7 @@ export default function QuizScreen() {
       <div className="pt-2 pb-4">
         <QuizSessionHeader
           title={
-            source === 'practice' ? 'Quiz' : source === 'review_mistake' ? 'Wrong answers' : 'Favorites'
+            source === 'practice' ? 'Quiz' : source === 'review_mistake' ? 'Wrong answers' : 'Saved questions'
           }
           {...(source === 'practice' ? { streakDataTour: 'quiz-streak' } : {})}
           subtitle={
@@ -410,7 +399,7 @@ export default function QuizScreen() {
             ) : source === 'review_mistake' ? (
               <p className="line-clamp-3">{MISTAKE_LIST_RULE}</p>
             ) : isReview ? (
-              <p className="line-clamp-2">Saved favorites · fixed order</p>
+              <p className="line-clamp-2">Fixed order · your saved list</p>
             ) : undefined
           }
           streak={streak}
@@ -425,8 +414,10 @@ export default function QuizScreen() {
           >
             {isReview && reviewIds.length > 0 ? (
               <motion.div
-                key={`review-${reviewIds.length}-${reviewIds[0] ?? 0}`}
-                className="h-full rounded-full bg-cc-accent"
+                key={`review-${source}-${reviewIds.length}-${reviewIds[0] ?? 0}`}
+                className={`h-full rounded-full ${
+                  source === 'review_mistake' ? 'bg-amber-400' : 'bg-cc-accent'
+                }`}
                 initial={{ width: '0%' }}
                 animate={{
                   width: `${Math.min(
@@ -486,6 +477,7 @@ export default function QuizScreen() {
                 onFavorite={handleFavorite}
                 isFavorited={current.status.is_favorited}
                 shaking={shaking}
+                shortcutsDisabled={Boolean(wrongVideo || quizTourOpen || wrongVideoTourOpen)}
               />
             </motion.div>
           )}

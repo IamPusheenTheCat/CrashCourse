@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
 
-const tabs = [
+const tabsAll = [
   { to: '/quiz', icon: 'fa-th-large', label: 'Quiz' },
   { to: '/profile', icon: 'fa-user', label: 'Profile' },
 ] as const;
 
 export default function TabBar() {
+  /** 仅 AppShell 在 `/profile`（非菜单直达）时挂载，始终 Quiz + Profile */
   return (
     <nav
       data-product-tour="shell-tabs"
@@ -19,7 +20,7 @@ export default function TabBar() {
         borderTop: '1px solid rgba(255,255,255,0.35)',
       }}
     >
-      {tabs.map((t) => (
+      {tabsAll.map((t) => (
         <NavLink
           key={t.to}
           to={t.to}

@@ -14,14 +14,17 @@ const skBar = 'rounded-md bg-cc-fill motion-safe:animate-pulse';
 function ProfileLoadingSkeleton() {
   return (
     <div aria-busy aria-label="Loading profile">
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {[0, 1, 2].map((i) => (
-          <GlassCard key={i} className="p-4 text-center">
-            <div className={`mx-auto h-8 w-14 ${skBar}`} />
-            <div className={`mx-auto mt-3 h-3 w-20 max-w-full ${skBar}`} />
-          </GlassCard>
-        ))}
-      </div>
+      <section className="mb-6">
+        <div className={`mb-3 h-4 w-36 max-w-full ${skBar}`} />
+        <div className="grid grid-cols-3 gap-3">
+          {[0, 1, 2].map((i) => (
+            <GlassCard key={i} className="p-4 text-center">
+              <div className={`mx-auto h-8 w-14 ${skBar}`} />
+              <div className={`mx-auto mt-3 h-3 w-20 max-w-full ${skBar}`} />
+            </GlassCard>
+          ))}
+        </div>
+      </section>
 
       <section className="mb-8">
         <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
@@ -30,7 +33,7 @@ function ProfileLoadingSkeleton() {
         </h2>
         <GlassCard className="p-4">
           <div className="flex justify-between text-sm mb-2">
-            <span className={`inline-block h-4 w-16 ${skBar}`} />
+            <span className={`inline-block h-4 w-32 max-w-[70%] ${skBar}`} />
             <span className={`inline-block h-4 w-10 ${skBar}`} />
           </div>
           <div className={`h-2 w-full rounded-full ${skBar}`} />
@@ -138,7 +141,7 @@ export default function ProfileScreen() {
     <div className="cc-page-inner">
       <ScreenHeader
         title="Profile"
-        subtitle="Stats, progress & Ebbinghaus curve"
+        subtitle="Stats, lists & forgetting curve"
         userEmail={userEmail}
         onBack={() => navigate('/menu')}
         backAriaLabel="Back to menu"
@@ -154,29 +157,46 @@ export default function ProfileScreen() {
         <ProfileLoadingSkeleton />
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <GlassCard className="p-4 text-center">
-              <div className="text-2xl font-bold text-cc-accent">{totalAnswered}</div>
-              <div className="text-cc-muted text-xs mt-1">Answered</div>
-            </GlassCard>
-            <GlassCard className="p-4 text-center">
-              <div className="text-2xl font-bold text-emerald-400">{totalCorrect}</div>
-              <div className="text-cc-muted text-xs mt-1">Correct</div>
-            </GlassCard>
-            <GlassCard className="p-4 text-center">
-              <div className="text-2xl font-bold text-amber-400">{totalWrong}</div>
-              <div className="text-cc-muted text-xs mt-1">Incorrect</div>
-            </GlassCard>
-          </div>
+          <section className="mb-6" aria-labelledby="profile-alltime-heading">
+            <h2
+              id="profile-alltime-heading"
+              className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2"
+            >
+              <i className="fas fa-chart-column text-cc-muted" aria-hidden />
+              All-time totals
+            </h2>
+            <div className="grid grid-cols-3 gap-3">
+              <GlassCard className="p-4 text-center">
+                <div className="text-2xl font-bold text-cc-accent">{totalAnswered}</div>
+                <div className="text-cc-muted text-xs mt-1">Answered</div>
+              </GlassCard>
+              <GlassCard className="p-4 text-center">
+                <div className="text-2xl font-bold text-emerald-400">{totalCorrect}</div>
+                <div className="text-cc-muted text-xs mt-1">Correct</div>
+              </GlassCard>
+              <GlassCard className="p-4 text-center">
+                <div className="text-2xl font-bold text-amber-400">{totalWrong}</div>
+                <div className="text-cc-muted text-xs mt-1">Incorrect</div>
+              </GlassCard>
+            </div>
+          </section>
 
           <section className="mb-8">
             <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
               <i className="fas fa-chart-line" aria-hidden /> Learning progress
             </h2>
             <GlassCard className="p-4">
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-cc-muted">Overall</span>
-                <span className="font-medium text-cc-fg">{pct}%</span>
+              <span id="profile-list-share-desc" className="sr-only">
+                Each question moves this up only the first time you answer it.
+              </span>
+              <div className="flex justify-between text-sm mb-2 gap-3">
+                <span className="text-cc-muted">Of all questions</span>
+                <span
+                  className="font-medium text-cc-fg tabular-nums"
+                  aria-describedby="profile-list-share-desc"
+                >
+                  {pct}%
+                </span>
               </div>
               <div className="h-2 rounded-full bg-cc-track overflow-hidden">
                 <div

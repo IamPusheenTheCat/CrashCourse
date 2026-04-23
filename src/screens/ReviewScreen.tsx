@@ -53,7 +53,7 @@ export default function ReviewScreen() {
     <div className="cc-page-inner">
       <ScreenHeader
         title="Review"
-        subtitle="Wrong answers & favorites"
+        subtitle="Wrong answers & saved questions"
         onBack={() => navigate('/menu')}
         backAriaLabel="Go back"
       />
@@ -66,7 +66,7 @@ export default function ReviewScreen() {
 
       <GlassCard className="p-4 mb-4">
         <p className="text-cc-muted text-sm leading-relaxed">
-          Tap wrong answers or favorites below to start a session
+          Tap wrong answers or saved questions below to start a session
         </p>
       </GlassCard>
 

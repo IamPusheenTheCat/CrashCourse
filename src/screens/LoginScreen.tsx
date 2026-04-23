@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { takeReauthFlashMessage } from '../auth/sessionInvalid';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import {
   FIRST_SIGN_IN_ACCOUNT_HINT,
@@ -13,7 +12,6 @@ import { ccInputClass, ccLabelClass } from '../components/ui/formClasses';
 
 export default function LoginScreen() {
   const navigate = useNavigate();
-  const location = useLocation();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const loginWithEmailPassword = useAuthStore((s) => s.loginWithEmailPassword);
 
@@ -21,14 +19,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [reauthBanner, setReauthBanner] = useState<string | null>(null);
-
-  useEffect(() => {
-    const flash = takeReauthFlashMessage();
-    const fromState = (location.state as { reauthMessage?: string } | null)?.reauthMessage;
-    const msg = flash ?? fromState ?? null;
-    if (msg) setReauthBanner(msg);
-  }, [location.key, location.state]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -65,14 +55,6 @@ export default function LoginScreen() {
       </div>
 
       <GlassCard className="w-full max-w-[320px] p-6">
-        {reauthBanner ? (
-          <p
-            className="text-sky-200/95 text-xs mb-4 leading-relaxed rounded-xl border border-sky-400/25 bg-sky-500/10 px-3 py-2.5"
-            role="status"
-          >
-            {reauthBanner}
-          </p>
-        ) : null}
         <form onSubmit={(ev) => void handleSubmit(ev)} noValidate>
           <label className={ccLabelClass} htmlFor="login-email">
             Email
@@ -100,7 +82,7 @@ export default function LoginScreen() {
           />
           {error ? (
             <p
-              className="text-amber-400 text-xs mb-4 leading-relaxed break-words whitespace-pre-wrap"
+              className="mb-4 rounded-xl border border-amber-400/35 bg-amber-500/[0.12] px-3.5 py-3 text-sm font-medium leading-snug text-amber-100/95 break-words whitespace-pre-wrap shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
               role="alert"
             >
               {error}

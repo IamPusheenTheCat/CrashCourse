@@ -188,16 +188,13 @@ async function tryRefreshAccessTokenDeduped(): Promise<RefreshAttempt> {
 
 async function clearSessionAfterRefreshFailure(): Promise<void> {
   const { useAuthStore } = await import('../stores/authStore');
-  await useAuthStore.getState().clearLocalSession({ notifyReauth: true });
+  await useAuthStore.getState().clearLocalSession();
 }
 
-/**
- * 冷启动同步清会话：本地曾有登录态但 refresh 被拒或 access 已死且无救。
- * 与手动 Logout 区分：被动退出时写入 reauth flash，登录页显示「会话已过期」蓝条。
- */
+/** 冷启动同步清会话：本地曾有登录态但 refresh 被拒或 access 已死且无救 */
 async function clearSessionAfterStartupSyncFailure(): Promise<void> {
   const { useAuthStore } = await import('../stores/authStore');
-  await useAuthStore.getState().clearLocalSession({ notifyReauth: true });
+  await useAuthStore.getState().clearLocalSession();
 }
 
 /**
@@ -264,6 +261,57 @@ async function parseJson(res: Response): Promise<unknown> {
   }
 }
 
+/** 后端保留中文 detail 时，登录等界面仍显示英文提示 */
+const DETAIL_TO_USER_MESSAGE: Record<string, string> = {
+  密码错误: 'Incorrect password',
+};
+
+function mapDetailForDisplay(detail: string): string {
+  const t = detail.trim();
+  return DETAIL_TO_USER_MESSAGE[t] ?? t;
+}
+
+/** 业务信封用 `msg`；FastAPI HTTPException 用 `detail`（常为字符串）。fetch 的 statusText 可能为空，不能依赖。 */
+function messageFromErrorBody(raw: unknown, res: Response): string {
+  if (typeof raw === 'string') {
+    const t = raw.trim();
+    if (t) return t;
+  }
+  if (typeof raw === 'object' && raw !== null) {
+    const o = raw as Record<string, unknown>;
+    if (typeof o.msg === 'string') {
+      const t = o.msg.trim();
+      if (t) return t;
+    }
+    const d = o.detail;
+    if (typeof d === 'string') {
+      const t = d.trim();
+      if (t) return mapDetailForDisplay(t);
+    }
+    if (Array.isArray(d)) {
+      const parts = d
+        .map((item) => {
+          if (typeof item === 'object' && item !== null && 'msg' in item) {
+            const m = (item as { msg: unknown }).msg;
+            return typeof m === 'string' ? m.trim() : '';
+          }
+          if (typeof item === 'string') return item.trim();
+          return '';
+        })
+        .filter(Boolean);
+      if (parts.length > 0) return parts.join(' ');
+    }
+  }
+  const st = res.statusText?.trim();
+  if (st) return st;
+  if (res.status === 400) return 'Invalid request';
+  if (res.status === 401) return 'Unauthorized';
+  if (res.status === 403) return 'Forbidden';
+  if (res.status === 404) return 'Not found';
+  if (res.status >= 500) return 'Server error';
+  return 'Request failed';
+}
+
 export async function apiRequest<T>(
   path: string,
   init: RequestInit & { json?: unknown } = {},
@@ -327,13 +375,9 @@ export async function apiRequest<T>(
         (getStoredToken() != null || getRefreshTokenSync() != null)
       ) {
         const { useAuthStore } = await import('../stores/authStore');
-        await useAuthStore.getState().clearLocalSession({ notifyReauth: true });
+        await useAuthStore.getState().clearLocalSession();
       }
-      const msg =
-        typeof raw === 'object' && raw !== null && 'msg' in raw && typeof (raw as { msg: unknown }).msg === 'string'
-          ? (raw as { msg: string }).msg
-          : res.statusText;
-      throw new ApiError(msg || 'Request failed', res.status, raw);
+      throw new ApiError(messageFromErrorBody(raw, res), res.status, raw);
     }
 
     return raw as T;
