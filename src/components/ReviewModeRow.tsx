@@ -1,4 +1,5 @@
 import type { KeyboardEvent } from 'react';
+import { MISTAKE_LIST_RULE } from '../constants/reviewCopy';
 import GlassCard from './GlassCard';
 
 export type ReviewRowMode = 'wrong' | 'favorite';
@@ -8,27 +9,15 @@ function rowTitle(mode: ReviewRowMode, count: number | null): string {
   return mode === 'wrong' ? `Wrong answers (${n})` : `Saved questions (${n})`;
 }
 
-type RowSubtitle =
-  | { layout: 'single'; text: string }
-  | { layout: 'stacked'; primary: string; secondary: string };
-
-function rowSubtitle(mode: ReviewRowMode, count: number | null): RowSubtitle {
+function rowSubtitle(mode: ReviewRowMode, count: number | null): { layout: 'single'; text: string } {
   if (mode === 'wrong') {
     return count === 0
       ? { layout: 'single', text: 'Nothing in your wrong-answers list' }
-      : {
-          layout: 'stacked',
-          primary: 'Review in fixed order',
-          secondary: 'Removed after two correct answers in a row',
-        };
+      : { layout: 'single', text: MISTAKE_LIST_RULE };
   }
   return count === 0
     ? { layout: 'single', text: 'No saved questions yet' }
-    : {
-        layout: 'stacked',
-        primary: 'Review in fixed order',
-        secondary: 'Stays on your list until you remove them',
-      };
+    : { layout: 'single', text: 'Stays on your list until you remove them' };
 }
 
 interface Props {
@@ -71,33 +60,29 @@ export default function ReviewModeRow({ mode, count, busy, onClick }: Props) {
       <div
         className={`w-11 h-11 shrink-0 rounded-xl border flex items-center justify-center ${
           mode === 'wrong'
-            ? 'border-amber-400/25 bg-amber-500/20'
-            : 'border-cc-border bg-cc-accent/25'
+            ? 'border-rose-400/25 bg-rose-500/20'
+            : 'border-amber-400/25 bg-amber-500/20'
         }`}
       >
         {busy ? (
           <i
             className={`fas fa-circle-notch fa-spin ${
-              mode === 'wrong' ? 'text-amber-400' : 'text-cc-accent'
+              mode === 'wrong' ? 'text-rose-400' : 'text-amber-400'
             }`}
           />
         ) : mode === 'wrong' ? (
-          <i className="fas fa-circle-xmark text-lg text-amber-400" aria-hidden />
+          <i className="fas fa-square-xmark text-xl leading-none text-rose-400" aria-hidden />
         ) : (
-          <i className="fas fa-bookmark text-cc-accent" aria-hidden />
+          <i className="fas fa-bookmark text-amber-400" aria-hidden />
         )}
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-sm text-cc-fg leading-snug">{rowTitle(mode, count)}</p>
-        {subtitle.layout === 'single' ? (
-          <p className="text-cc-muted text-[13px] leading-snug mt-1">{subtitle.text}</p>
-        ) : (
-          <div className="mt-1 space-y-0.5">
-            <p className="text-cc-muted text-[13px] leading-snug">{subtitle.primary}</p>
-            <p className="text-cc-muted text-[13px] leading-snug">{subtitle.secondary}</p>
-          </div>
-        )}
+        <p className="text-cc-muted text-[13px] leading-snug mt-1">{subtitle.text}</p>
       </div>
+      {clickable && !busy ? (
+        <i className="fas fa-chevron-right shrink-0 text-[11px] text-cc-muted/45" aria-hidden />
+      ) : null}
     </GlassCard>
   );
 }

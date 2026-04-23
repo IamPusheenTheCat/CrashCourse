@@ -28,7 +28,7 @@ export default function SettingsScreen() {
     <div className="cc-page-inner">
       <ScreenHeader
         title="Settings"
-        subtitle="Sounds, videos & reminders"
+        subtitle="Sound, video & reminders"
         userEmail={userEmail}
         onBack={() => goBackOrMenu(navigate)}
         backAriaLabel="Go back"
@@ -97,7 +97,7 @@ export default function SettingsScreen() {
         ) : (
           <GlassCard className="rounded-2xl p-4">
             <p className="text-sm font-medium text-red-300 leading-relaxed text-center">
-              This permanently deletes your account and associated data — you will need to sign up again to use the app
+              This permanently deletes your account and associated data; you will need to sign up again to use the app
             </p>
             {deleteError ? (
               <p className="mt-3 text-xs text-amber-400" role="alert">

@@ -8,6 +8,16 @@ import App from './App';
 import { hydrateRefreshTokenFromNative } from './auth/refreshTokenStorage';
 import { runStartupAuthSync } from './api/client';
 
+type WindowWithBootTimer = Window & { __ccBootShowTid?: ReturnType<typeof setTimeout> };
+
+function cancelBootShellRevealTimer(): void {
+  const w = window as WindowWithBootTimer;
+  if (w.__ccBootShowTid != null) {
+    clearTimeout(w.__ccBootShowTid);
+    w.__ccBootShowTid = undefined;
+  }
+}
+
 /** 等 React 提交首帧后再关原生启动图，减轻 WebView 白屏间隙（浏览器无操作） */
 function scheduleHideNativeSplash() {
   if (!Capacitor.isNativePlatform()) return;
@@ -24,6 +34,7 @@ function scheduleHideNativeSplash() {
 async function bootstrap() {
   await hydrateRefreshTokenFromNative();
   await runStartupAuthSync();
+  cancelBootShellRevealTimer();
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App />

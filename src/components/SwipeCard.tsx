@@ -263,11 +263,11 @@ export default function SwipeCard({
   return (
     <div className="relative" data-product-tour="quiz-card">
       <motion.div
-        className="absolute -top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex items-center gap-2 rounded-full border border-white/35 bg-cc-accent/45 px-4 py-2 shadow-lg backdrop-blur-xl"
+        className="absolute -top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex items-center gap-2 rounded-full border border-amber-300/40 bg-amber-500/45 px-4 py-2 shadow-lg backdrop-blur-xl"
         style={{ opacity: favIndicatorOpacity, scale: favIndicatorScale }}
       >
-        <i className="fas fa-bookmark text-white text-sm" aria-hidden />
-        <span className="text-sm font-semibold text-white">
+        <i className="fas fa-bookmark text-amber-50 text-sm" aria-hidden />
+        <span className="text-sm font-semibold text-amber-50">
           {isFavorited ? 'Remove' : 'Save'}
         </span>
       </motion.div>
@@ -282,10 +282,10 @@ export default function SwipeCard({
       >
         {isFavorited && (
           <div
-            className="absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/35 bg-cc-accent/45 shadow-md backdrop-blur-xl"
+            className="absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-amber-300/40 bg-amber-500/45 shadow-md backdrop-blur-xl"
             title="Saved"
           >
-            <i className="fas fa-bookmark text-white text-xs" aria-hidden />
+            <i className="fas fa-bookmark text-amber-50 text-xs" aria-hidden />
           </div>
         )}
 
@@ -388,7 +388,7 @@ export default function SwipeCard({
             <span>Drag sideways to answer</span>
           </span>
           <span className="inline-flex items-center gap-2">
-            <i className="fas fa-arrow-up text-[13px] opacity-80" />
+            <i className="fas fa-arrow-up text-[13px] opacity-80" aria-hidden />
             <span>Swipe up to save</span>
           </span>
         </div>
@@ -400,7 +400,7 @@ export default function SwipeCard({
               Submit choice
             </span>
             <span>
-              <i className="fas fa-arrow-up mr-1" /> Save
+              <i className="fas fa-arrow-up mr-1" aria-hidden /> Save
             </span>
           </div>
           <p className="mt-1.5 text-[11px] text-cc-muted/80">

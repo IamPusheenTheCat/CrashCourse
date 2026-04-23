@@ -103,9 +103,8 @@ src/
 │   └── GlassCard.tsx        # Reusable glass panel
 ├── screens/
 │   ├── LoginScreen.tsx
-│   ├── MenuScreen.tsx       # Practice / Review / Settings
+│   ├── MenuScreen.tsx       # Practice / full-bank / Profile / Settings
 │   ├── QuizScreen.tsx       # Main quiz loop
-│   ├── ReviewScreen.tsx
 │   ├── ProfileScreen.tsx
 │   └── SettingsScreen.tsx
 public/

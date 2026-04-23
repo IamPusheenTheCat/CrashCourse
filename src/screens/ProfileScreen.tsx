@@ -7,8 +7,13 @@ import { useNavigate } from 'react-router-dom';
 import * as api from '../api/services';
 import { useQuizStore } from '../stores/quizStore';
 import { useAuthStore } from '../stores/authStore';
+import { PROFILE_MISTAKES_SAVED_SECTION_TITLE, PROFILE_SCREEN_SUBTITLE } from '../constants/profileCopy';
 
 const skBar = 'rounded-md bg-cc-fill motion-safe:animate-pulse';
+
+/** Section rails: one brightness, icons inherit (no per-section color) */
+const profileSectionHeadingClass =
+  'text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2 [&_i]:opacity-90';
 
 /** 与加载完成后的版式对齐，避免整页从「单转圈」切成大块内容时的跳动 */
 function ProfileLoadingSkeleton() {
@@ -27,8 +32,8 @@ function ProfileLoadingSkeleton() {
       </section>
 
       <section className="mb-8">
-        <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
-          <i className="fas fa-chart-line text-cc-muted" aria-hidden />
+        <h2 className={profileSectionHeadingClass}>
+          <i className="fas fa-chart-line" aria-hidden />
           Learning progress
         </h2>
         <GlassCard className="p-4">
@@ -41,9 +46,9 @@ function ProfileLoadingSkeleton() {
       </section>
 
       <section className="mb-6">
-        <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
-          <i className="fas fa-list-ul text-cc-muted" aria-hidden />
-          Your lists
+        <h2 className={profileSectionHeadingClass}>
+          <i className="fas fa-list-ul" aria-hidden />
+          {PROFILE_MISTAKES_SAVED_SECTION_TITLE}
         </h2>
         <div className="flex flex-col gap-3">
           {[0, 1].map((i) => (
@@ -62,8 +67,8 @@ function ProfileLoadingSkeleton() {
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
-          <i className="fas fa-chart-area text-emerald-400/90" aria-hidden />
+        <h2 className={profileSectionHeadingClass}>
+          <i className="fas fa-chart-area" aria-hidden />
           Ebbinghaus Forgetting Curve
         </h2>
         <GlassCard className="p-4">
@@ -141,7 +146,7 @@ export default function ProfileScreen() {
     <div className="cc-page-inner">
       <ScreenHeader
         title="Profile"
-        subtitle="Stats, lists & forgetting curve"
+        subtitle={PROFILE_SCREEN_SUBTITLE}
         userEmail={userEmail}
         onBack={() => navigate('/menu')}
         backAriaLabel="Back to menu"
@@ -158,16 +163,13 @@ export default function ProfileScreen() {
       ) : (
         <>
           <section className="mb-6" aria-labelledby="profile-alltime-heading">
-            <h2
-              id="profile-alltime-heading"
-              className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2"
-            >
-              <i className="fas fa-chart-column text-cc-muted" aria-hidden />
+            <h2 id="profile-alltime-heading" className={profileSectionHeadingClass}>
+              <i className="fas fa-chart-column" aria-hidden />
               All-time totals
             </h2>
             <div className="grid grid-cols-3 gap-3">
               <GlassCard className="p-4 text-center">
-                <div className="text-2xl font-bold text-cc-accent">{totalAnswered}</div>
+                <div className="text-2xl font-bold text-cc-fg">{totalAnswered}</div>
                 <div className="text-cc-muted text-xs mt-1">Answered</div>
               </GlassCard>
               <GlassCard className="p-4 text-center">
@@ -175,15 +177,16 @@ export default function ProfileScreen() {
                 <div className="text-cc-muted text-xs mt-1">Correct</div>
               </GlassCard>
               <GlassCard className="p-4 text-center">
-                <div className="text-2xl font-bold text-amber-400">{totalWrong}</div>
+                <div className="text-2xl font-bold text-rose-400">{totalWrong}</div>
                 <div className="text-cc-muted text-xs mt-1">Incorrect</div>
               </GlassCard>
             </div>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
-              <i className="fas fa-chart-line" aria-hidden /> Learning progress
+            <h2 className={profileSectionHeadingClass}>
+              <i className="fas fa-chart-line" aria-hidden />
+              Learning progress
             </h2>
             <GlassCard className="p-4">
               <span id="profile-list-share-desc" className="sr-only">
@@ -214,9 +217,9 @@ export default function ProfileScreen() {
           ) : null}
 
           <section className="mb-6">
-            <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
-              <i className="fas fa-list-ul text-cc-muted" aria-hidden />
-              Your lists
+            <h2 className={profileSectionHeadingClass}>
+              <i className="fas fa-list-ul" aria-hidden />
+              {PROFILE_MISTAKES_SAVED_SECTION_TITLE}
             </h2>
             <div
               className={`flex flex-col gap-3 ${reviewLaunching ? 'pointer-events-none opacity-70' : ''}`}
@@ -237,8 +240,8 @@ export default function ProfileScreen() {
           </section>
 
           <section>
-            <h2 className="text-sm font-semibold text-cc-fg mb-3 flex items-center gap-2">
-              <i className="fas fa-chart-area text-emerald-400/90" aria-hidden />
+            <h2 className={profileSectionHeadingClass}>
+              <i className="fas fa-chart-area" aria-hidden />
               Ebbinghaus Forgetting Curve
             </h2>
             <GlassCard className="p-4">

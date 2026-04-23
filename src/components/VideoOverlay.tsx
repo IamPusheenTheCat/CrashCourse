@@ -82,8 +82,8 @@ export default function VideoOverlay({
   }, [isReady, closing, suppressContinueKeyboard, handleContinue]);
 
   const dialogAriaLabel = trimmedLabel
-    ? `Wrong answer. ${trimmedLabel}`
-    : 'Wrong answer. Review the video, then tap Continue.';
+    ? `Wrong answer: ${trimmedLabel}`
+    : 'Wrong answer: review the video, then tap Continue';
 
   return (
     <div

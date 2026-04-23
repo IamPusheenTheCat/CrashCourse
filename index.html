@@ -2,15 +2,131 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="./car_crash.svg?v=8" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./car_crash.svg?v=8" />
+    <link rel="icon" href="./car_crash.svg?v=10" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./car_crash.svg?v=10" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>CrashCourse</title>
+    <style>
+      #cc-boot-flash {
+        min-height: 100vh;
+        box-sizing: border-box;
+        background: #1a1a2e;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.22s ease, visibility 0.22s ease;
+      }
+      #cc-boot-flash.cc-boot-visible {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+      }
+      #cc-boot-flash .cc-boot-logo {
+        width: 72px;
+        height: 72px;
+        display: block;
+        animation: none;
+      }
+      #cc-boot-flash.cc-boot-visible .cc-boot-logo {
+        animation: cc-boot-pulse 1.6s ease-in-out infinite;
+      }
+      #cc-boot-flash .cc-boot-title {
+        margin: 20px 0 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #fff;
+      }
+      #cc-boot-flash .cc-boot-sub {
+        margin: 10px 0 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 0.8125rem;
+        color: rgba(255, 255, 255, 0.5);
+      }
+      #cc-boot-flash .cc-boot-bar {
+        margin-top: 28px;
+        width: 128px;
+        height: 3px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+      }
+      #cc-boot-flash .cc-boot-bar-fill {
+        display: block;
+        height: 100%;
+        width: 36%;
+        border-radius: inherit;
+        background: #e94560;
+        animation: none;
+      }
+      #cc-boot-flash.cc-boot-visible .cc-boot-bar-fill {
+        animation: cc-boot-slide 1.15s ease-in-out infinite;
+      }
+      @keyframes cc-boot-pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.58;
+        }
+      }
+      @keyframes cc-boot-slide {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(320%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #cc-boot-flash {
+          transition: none;
+        }
+        #cc-boot-flash.cc-boot-visible .cc-boot-logo,
+        #cc-boot-flash.cc-boot-visible .cc-boot-bar-fill {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body style="background:#1a1a2e;margin:0">
-    <div id="root" style="min-height:100vh;background:#1a1a2e"></div>
+    <div id="root" style="min-height:100vh;background:#1a1a2e">
+      <div id="cc-boot-flash" aria-live="polite" aria-busy="true">
+        <img
+          class="cc-boot-logo"
+          src="./car_crash.svg?v=10"
+          width="72"
+          height="72"
+          alt=""
+          decoding="async"
+          fetchpriority="high"
+        />
+        <h1 class="cc-boot-title">CrashCourse</h1>
+        <p class="cc-boot-sub">Loading</p>
+        <div class="cc-boot-bar" aria-hidden="true"><span class="cc-boot-bar-fill"></span></div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        /** 短于此时长则保持隐藏，避免快网「闪一下」Loading；与 main.tsx 里 clear 成对 */
+        var CC_BOOT_SHOW_AFTER_MS = 400;
+        window.__ccBootShowTid = setTimeout(function () {
+          window.__ccBootShowTid = null;
+          var el = document.getElementById('cc-boot-flash');
+          if (el) el.classList.add('cc-boot-visible');
+        }, CC_BOOT_SHOW_AFTER_MS);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

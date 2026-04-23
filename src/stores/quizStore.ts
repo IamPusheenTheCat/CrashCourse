@@ -1,10 +1,16 @@
 import { create } from 'zustand';
 import type { QuizQuestion, SubmitAnswerResult } from '../types/quiz';
 import * as api from '../api/services';
+import {
+  clearReviewAllSlot,
+  loadReviewAllSlot,
+  reviewIdMultisetEquals,
+  saveReviewAllSlot,
+} from '../lib/reviewAllProgressStorage';
 
 type QuestionDetail = api.QuestionDetail;
 
-export type QuizSource = 'practice' | 'review_favorite' | 'review_mistake';
+export type QuizSource = 'practice' | 'review_favorite' | 'review_mistake' | 'review_all';
 
 /** 防止 React Strict Mode 或快速重复点击导致并发 get_next */
 let practiceStartInFlight = false;
@@ -32,9 +38,13 @@ interface QuizState {
   practiceSessionTotal: number | null;
   /** 练习会话当前题 0-based 下标（打开本题即算入进度，展示为 index + 1） */
   practiceProgressIndex: number;
+  /** 全库通刷是否使用随机顺序（由菜单选项 + get_random 种子洗牌） */
+  reviewAllRandomOrder: boolean;
 
   startPractice: () => Promise<void>;
   startReview: (mode: 'favorite' | 'mistake') => Promise<void>;
+  /** 菜单「复习」：通刷全库；`randomOrder` 时用 get_ids 全集 + get_random 种子洗牌 */
+  startReviewAllQuestions: (opts?: { randomOrder?: boolean }) => Promise<void>;
   submitCurrent: (selectedOption: string) => Promise<SubmitAnswerResult>;
   toggleFavorite: () => Promise<void>;
   /** 练习模式下可传入已预取的下一题，避免 Continue 后再打 get_next 并闪 loading */
@@ -55,6 +65,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
   streak: 0,
   practiceSessionTotal: null,
   practiceProgressIndex: 0,
+  reviewAllRandomOrder: false,
 
   clearQuiz: () =>
     set({
@@ -67,6 +78,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       streak: 0,
       practiceSessionTotal: null,
       practiceProgressIndex: 0,
+      reviewAllRandomOrder: false,
     }),
 
   startPractice: async () => {
@@ -80,6 +92,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       reviewIndex: 0,
       practiceProgressIndex: 0,
       practiceSessionTotal: null,
+      reviewAllRandomOrder: false,
     });
     try {
       let sessionTotal: number | null = null;
@@ -121,6 +134,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       streak: 0,
       practiceSessionTotal: null,
       practiceProgressIndex: 0,
+      reviewAllRandomOrder: false,
     });
     try {
       const ids =
@@ -154,6 +168,91 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     }
   },
 
+  startReviewAllQuestions: async (opts) => {
+    const randomOrder = Boolean(opts?.randomOrder);
+    set({
+      loading: true,
+      error: null,
+      source: 'review_all',
+      streak: 0,
+      practiceSessionTotal: null,
+      practiceProgressIndex: 0,
+      reviewAllRandomOrder: randomOrder,
+    });
+    try {
+      const freshCanon = await api.fetchAllActiveQuestionIds();
+      if (freshCanon.length === 0) {
+        clearReviewAllSlot(randomOrder);
+        set({
+          current: null,
+          reviewIds: [],
+          reviewIndex: 0,
+          loading: false,
+          error: 'No active questions in the bank',
+          reviewAllRandomOrder: false,
+        });
+        return;
+      }
+
+      const saved = loadReviewAllSlot(randomOrder);
+      if (
+        saved != null &&
+        saved.reviewIds.length > 0 &&
+        reviewIdMultisetEquals(saved.reviewIds, freshCanon)
+      ) {
+        const idx = Math.min(Math.max(0, saved.reviewIndex), saved.reviewIds.length - 1);
+        try {
+          const detail = await api.getQuestionDetail(saved.reviewIds[idx]!);
+          set({
+            reviewIds: saved.reviewIds,
+            reviewIndex: idx,
+            current: mapDetail(detail),
+            loading: false,
+            error: null,
+          });
+          return;
+        } catch {
+          clearReviewAllSlot(randomOrder);
+        }
+      } else if (saved != null && !reviewIdMultisetEquals(saved.reviewIds, freshCanon)) {
+        clearReviewAllSlot(randomOrder);
+      }
+
+      const ids = randomOrder ? await api.fetchAllActiveQuestionIdsRandomOrder() : freshCanon;
+      if (ids.length === 0) {
+        clearReviewAllSlot(randomOrder);
+        set({
+          current: null,
+          reviewIds: [],
+          reviewIndex: 0,
+          loading: false,
+          error: 'No active questions in the bank',
+          reviewAllRandomOrder: false,
+        });
+        return;
+      }
+      const first = await api.getQuestionDetail(ids[0]);
+      set({
+        reviewIds: ids,
+        reviewIndex: 0,
+        current: mapDetail(first),
+        loading: false,
+        error: null,
+      });
+      saveReviewAllSlot(randomOrder, { reviewIds: ids, reviewIndex: 0 });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to start full review';
+      set({
+        current: null,
+        reviewIds: [],
+        reviewIndex: 0,
+        loading: false,
+        error: msg,
+        reviewAllRandomOrder: false,
+      });
+    }
+  },
+
   submitCurrent: async (selectedOption) => {
     const q = get().current;
     if (!q) throw new Error('No question loaded');
@@ -184,7 +283,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
   },
 
   advanceAfterAnswer: async (opts?: { practiceNextPrefetched?: QuestionDetail }) => {
-    const { source, reviewIds, reviewIndex } = get();
+    const { source, reviewIds, reviewIndex, reviewAllRandomOrder } = get();
     if (!source) return;
 
     if (source === 'practice') {
@@ -230,6 +329,9 @@ export const useQuizStore = create<QuizState>((set, get) => ({
 
     const nextIdx = reviewIndex + 1;
     if (nextIdx >= reviewIds.length) {
+      if (source === 'review_all') {
+        clearReviewAllSlot(reviewAllRandomOrder);
+      }
       set({ current: null, error: null });
       return;
     }
@@ -241,6 +343,9 @@ export const useQuizStore = create<QuizState>((set, get) => ({
         reviewIndex: nextIdx,
         loading: false,
       });
+      if (source === 'review_all') {
+        saveReviewAllSlot(reviewAllRandomOrder, { reviewIds, reviewIndex: nextIdx });
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to load question';
       set({ loading: false, error: msg });
@@ -249,7 +354,13 @@ export const useQuizStore = create<QuizState>((set, get) => ({
 
   getReviewProgress: () => {
     const s = get();
-    if (s.source !== 'review_favorite' && s.source !== 'review_mistake') return '';
+    if (
+      s.source !== 'review_favorite' &&
+      s.source !== 'review_mistake' &&
+      s.source !== 'review_all'
+    ) {
+      return '';
+    }
     if (s.reviewIds.length === 0) return '';
     return `${s.reviewIndex + 1} / ${s.reviewIds.length}`;
   },

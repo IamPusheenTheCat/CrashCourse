@@ -39,6 +39,17 @@ export async function logout(): Promise<void> {
   }
 }
 
+/** GET /auth/me — 冷启动在 React 首帧前校验，避免本地 JWT 仍可读但服务端已拒时先闪菜单再跳登录 */
+export async function verifyAuthSessionAtStartup(): Promise<void> {
+  const res = await apiRequest<ApiEnvelope<{ user_id?: number }>>('/auth/me', {
+    method: 'GET',
+  });
+  if (res.code !== 200 || !res.data) {
+    const { useAuthStore } = await import('../stores/authStore');
+    await useAuthStore.getState().clearLocalSession();
+  }
+}
+
 /** DELETE /auth/me — 永久注销当前登录账号（需 Bearer） */
 export async function deleteMyAccount(): Promise<void> {
   const res = await apiRequest<ApiEnvelope<unknown>>('/auth/me', {
@@ -110,6 +121,89 @@ export async function getNextQuestion(): Promise<QuestionDetail> {
     throw new Error('No question available');
   }
   return data.question;
+}
+
+/** GET /questions/get_ids — 活跃题库 id 分页（与后端 page/page_size 一致） */
+export interface QuestionIdsPageData {
+  question_ids: number[];
+  page_size: number;
+  page: number;
+}
+
+export async function getQuestionIdsPage(page = 1, pageSize = 200): Promise<QuestionIdsPageData> {
+  const qs = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  const res = await apiRequest<ApiEnvelope<QuestionIdsPageData>>(`/questions/get_ids?${qs}`, {
+    method: 'GET',
+  });
+  if (res.code !== 200 || res.data == null) {
+    throw new Error(res.msg || 'Failed to load question list');
+  }
+  const { question_ids, page_size: respPageSize, page: respPage } = res.data;
+  const ids = Array.isArray(question_ids)
+    ? question_ids.map((x) => Number(x)).filter((n) => Number.isFinite(n))
+    : [];
+  return {
+    question_ids: ids,
+    page_size: typeof respPageSize === 'number' ? respPageSize : pageSize,
+    page: typeof respPage === 'number' ? respPage : page,
+  };
+}
+
+const BANK_IDS_PAGE_SIZE = 200;
+const BANK_IDS_MAX_PAGES = 250;
+
+/** 拉取全部活跃题 id（按 get_ids 分页顺序拼接） */
+export async function fetchAllActiveQuestionIds(): Promise<number[]> {
+  const out: number[] = [];
+  for (let p = 1; p <= BANK_IDS_MAX_PAGES; p++) {
+    const batch = await getQuestionIdsPage(p, BANK_IDS_PAGE_SIZE);
+    out.push(...batch.question_ids);
+    if (batch.question_ids.length < BANK_IDS_PAGE_SIZE) break;
+  }
+  return out;
+}
+
+/** GET /questions/get_random — 与后端一致，从活跃池中随机返回一题详情 */
+export async function getRandomQuestion(): Promise<QuestionDetail> {
+  const res = await apiRequest<ApiEnvelope<QuestionDetail>>('/questions/get_random', {
+    method: 'GET',
+  });
+  if (res.code !== 200 || res.data == null) {
+    throw new Error(res.msg || 'No random question available');
+  }
+  return res.data;
+}
+
+/** Fisher–Yates，用 32 位 seed 驱动；避免对每题打 get_random */
+function shuffleIdsWithSeed(ids: number[], seed: number): number[] {
+  const a = [...ids];
+  let s = seed >>> 0;
+  if (s === 0) s = 0x9e3779b9;
+  const rnd = () => {
+    s = (Math.imul(1664525, s) + 1013904223) >>> 0;
+    return s / 0x1_0000_0000;
+  };
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    const t = a[i]!;
+    a[i] = a[j]!;
+    a[j] = t;
+  }
+  return a;
+}
+
+/**
+ * 全库 id 全集仍来自 get_ids；随机顺序时额外调用一次 get_random，
+ * 用返回的 question_id 作洗牌种子（与后端「从活跃池均匀抽题」同源随机性）。
+ */
+export async function fetchAllActiveQuestionIdsRandomOrder(): Promise<number[]> {
+  const base = await fetchAllActiveQuestionIds();
+  if (base.length <= 1) return base;
+  const rnd = await getRandomQuestion();
+  return shuffleIdsWithSeed(base, rnd.question_id);
 }
 
 export async function getQuestionDetail(questionId: number): Promise<QuestionDetail> {

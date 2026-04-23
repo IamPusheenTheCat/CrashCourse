@@ -94,7 +94,7 @@ function SignImageEnlargeable({ src, alt }: { src: string; alt: string }) {
       <button
         type="button"
         className="inline-flex max-w-[min(90vw,13.5rem)] shrink-0 cursor-zoom-in align-middle rounded-md border-0 bg-transparent p-0 mx-0.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-        aria-label={`${alt} — tap to view larger`}
+        aria-label={`${alt}, tap to view larger`}
         onClick={(e) => {
           e.stopPropagation();
           setOpen(true);

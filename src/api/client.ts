@@ -72,15 +72,15 @@ export function getApiBase(): string {
 export function apiBaseHintForErrors(): string {
   if (import.meta.env.VITE_API_BASE_URL) return '';
   if (import.meta.env.DEV) {
-    return ' Start the backend on port 8000 (Vite proxies /api/v1).';
+    return ' Start the backend on port 8000 (Vite proxies /api/v1)';
   }
   if (Capacitor.isNativePlatform()) {
     if (Capacitor.getPlatform() === 'android') {
-      return ' Android: start backend with uvicorn --host 0.0.0.0 --port 8000. Emulator uses 10.0.2.2; on a real phone set VITE_API_BASE_URL to http://YOUR_PC_LAN_IP:8000/api/v1 and rebuild.';
+      return ' Android: start backend with uvicorn --host 0.0.0.0 --port 8000. Emulator uses 10.0.2.2; on a real phone set VITE_API_BASE_URL to http://YOUR_PC_LAN_IP:8000/api/v1 and rebuild';
     }
-    return ' iOS: set VITE_API_BASE_URL to your Mac’s LAN URL before npm run build (simulator can use 127.0.0.1).';
+    return ' iOS: set VITE_API_BASE_URL to your Mac’s LAN URL before npm run build (simulator can use 127.0.0.1)';
   }
-  return ' Set VITE_API_BASE_URL or run npm run dev with the backend on port 8000.';
+  return ' Set VITE_API_BASE_URL or run npm run dev with the backend on port 8000';
 }
 
 export function getStoredToken(): string | null {
@@ -199,7 +199,7 @@ async function clearSessionAfterStartupSyncFailure(): Promise<void> {
 
 /**
  * 在 React 首帧之前调用（见 main.tsx）。
- * 避免：本地仍有 access JWT → 路由进菜单 → 首包 401/续期失败 → 清会话跳登录，造成「先闪菜单再登录」。
+ * 续期逻辑 + 末尾 GET /auth/me：避免本地 JWT 未进续期窗口但服务端已拒时，先渲染菜单再被首包 401 踢回登录。
  */
 export async function runStartupAuthSync(): Promise<void> {
   const token = getStoredToken();
@@ -214,23 +214,32 @@ export async function runStartupAuthSync(): Promise<void> {
   const expMs = decodeJwtExpMs(token);
   const now = Date.now();
   const inRefreshWindow = expMs != null && now >= expMs - ACCESS_REFRESH_LEEWAY_MS;
-  if (!inRefreshWindow) return;
 
-  const rt = getRefreshTokenSync();
-  if (rt == null) {
-    if (expMs != null && now >= expMs) {
-      await clearSessionAfterStartupSyncFailure();
+  if (inRefreshWindow) {
+    const rt = getRefreshTokenSync();
+    if (rt == null) {
+      if (expMs != null && now >= expMs) {
+        await clearSessionAfterStartupSyncFailure();
+      }
+    } else {
+      const expired = expMs != null && now >= expMs;
+      if (expired || now - lastProactiveRefreshAt >= PROACTIVE_REFRESH_COOLDOWN_MS) {
+        const r = await tryRefreshAccessTokenDeduped();
+        if (r === 'ok' || !expired) lastProactiveRefreshAt = Date.now();
+        /** 仅服务端明确拒绝 refresh 时才清会话；网络/5xx 保留令牌，下面 /auth/me 或进菜单后再续期 */
+        if (r === 'rejected' && expired) await clearSessionAfterStartupSyncFailure();
+      }
     }
-    return;
   }
 
-  const expired = expMs != null && now >= expMs;
-  if (!expired && now - lastProactiveRefreshAt < PROACTIVE_REFRESH_COOLDOWN_MS) return;
+  if (!getStoredToken()) return;
 
-  const r = await tryRefreshAccessTokenDeduped();
-  if (r === 'ok' || !expired) lastProactiveRefreshAt = Date.now();
-  /** 仅服务端明确拒绝 refresh 时才清会话；网络/5xx 保留令牌，进菜单后再续期 */
-  if (r === 'rejected' && expired) await clearSessionAfterStartupSyncFailure();
+  try {
+    const { verifyAuthSessionAtStartup } = await import('./services');
+    await verifyAuthSessionAtStartup();
+  } catch {
+    /** 网络等暂态：保留本地登录态；401 与非法会话已在 apiRequest / verify 内清会话 */
+  }
 }
 
 export interface ApiEnvelope<T> {
@@ -336,13 +345,13 @@ export async function apiRequest<T>(
         body: init.json !== undefined ? JSON.stringify(init.json) : init.body,
       });
     } catch (err) {
-      const hint = apiBaseHintForErrors() || ' Check that the API URL is correct and the server is running.';
+      const hint = apiBaseHintForErrors() || ' Check that the API URL is correct and the server is running';
       if (import.meta.env.DEV || Capacitor.isNativePlatform()) {
         console.warn('[CrashCourse] fetch failed:', url, err);
       }
       const message =
         err instanceof TypeError && (err.message === 'Failed to fetch' || err.message.includes('fetch'))
-          ? `Could not reach the API (${url}).${hint}`
+          ? `Could not reach the API (${url})${hint}`
           : err instanceof Error
             ? err.message
             : 'Network error';
@@ -361,7 +370,7 @@ export async function apiRequest<T>(
       if (rr === 'ok') continue;
       if (rr === 'transient') {
         throw new ApiError(
-          `Could not reach the server to refresh your session.${apiBaseHintForErrors()}`,
+          `Could not reach the server to refresh your session${apiBaseHintForErrors()}`,
           0,
         );
       }

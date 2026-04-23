@@ -207,10 +207,10 @@ export default function ProductTourOverlay({
                     <button
                       type="button"
                       className="rounded-xl px-3 py-2 text-xs font-medium text-cc-muted hover:bg-white/10"
-                      aria-label="Skip all remaining tour steps and close"
+                      aria-label="Skip the rest of this guide"
                       onClick={handleSkip}
                     >
-                      Skip all
+                      Skip tour
                     </button>
                   ) : null}
                   <button

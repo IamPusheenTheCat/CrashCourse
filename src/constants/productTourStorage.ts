@@ -4,11 +4,24 @@
  */
 
 function keyMenu(uid: number): string {
-  return `crashcourse-tour-menu-v1-u${uid}`;
+  /** v3：去掉 Settings 教程步 */
+  return `crashcourse-tour-menu-v3-u${uid}`;
+}
+
+function legacyKeyMenuV2(uid: number): string {
+  return `crashcourse-tour-menu-v2-u${uid}`;
 }
 
 function keyQuiz(uid: number): string {
-  /** v4：Tap + Swipe 合并为一步后升级键名 */
+  /** v6：顶栏+进度条与 streak 一步 + 答题滑动；首次完成于任一 Quiz 模式即记为完成 */
+  return `crashcourse-tour-quiz-v6-u${uid}`;
+}
+
+function legacyKeyQuizV5(uid: number): string {
+  return `crashcourse-tour-quiz-v5-u${uid}`;
+}
+
+function legacyKeyQuizV4(uid: number): string {
   return `crashcourse-tour-quiz-v4-u${uid}`;
 }
 
@@ -19,7 +32,8 @@ function keyQuizWrongVideo(uid: number): string {
 
 export function readMenuProductTourDone(userId: number): boolean {
   try {
-    return localStorage.getItem(keyMenu(userId)) === '1';
+    if (localStorage.getItem(keyMenu(userId)) === '1') return true;
+    return localStorage.getItem(legacyKeyMenuV2(userId)) === '1';
   } catch {
     return false;
   }
@@ -35,7 +49,9 @@ export function markMenuProductTourDone(userId: number): void {
 
 export function readQuizProductTourDone(userId: number): boolean {
   try {
-    return localStorage.getItem(keyQuiz(userId)) === '1';
+    if (localStorage.getItem(keyQuiz(userId)) === '1') return true;
+    if (localStorage.getItem(legacyKeyQuizV5(userId)) === '1') return true;
+    return localStorage.getItem(legacyKeyQuizV4(userId)) === '1';
   } catch {
     return false;
   }

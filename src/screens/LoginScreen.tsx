@@ -48,10 +48,10 @@ export default function LoginScreen() {
     <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-44px)] pb-8">
       <div className="text-center mb-10">
         <div className="glass w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <i className="fas fa-car-crash text-4xl text-cc-accent" />
+          <i className="fas fa-car-crash text-4xl text-cc-accent" aria-hidden />
         </div>
         <h1 className="text-3xl font-bold tracking-tight">CrashCourse</h1>
-        <p className="text-cc-muted mt-2 text-sm">Learn the rules. Avoid the crash</p>
+        <p className="text-cc-muted mt-2 text-sm">Learn the rules, avoid the crash</p>
       </div>
 
       <GlassCard className="w-full max-w-[320px] p-6">

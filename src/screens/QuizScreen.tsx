@@ -10,7 +10,12 @@ import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { FEEDBACK_DURATION_MS } from '../components/VideoOverlay';
 import type { SubmitAnswerResult } from '../types/quiz';
-import { MISTAKE_LIST_RULE } from '../constants/reviewCopy';
+import {
+  FULL_BANK_MODE_TITLE,
+  FULL_BANK_QUIZ_SUBTITLE_LIST_ORDER,
+  FULL_BANK_QUIZ_SUBTITLE_SHUFFLED,
+  MISTAKE_LIST_RULE,
+} from '../constants/reviewCopy';
 import {
   PRACTICE_COMPLETE_HEADLINE,
   PRACTICE_COMPLETE_SUBLINE,
@@ -26,6 +31,7 @@ import {
   readQuizWrongVideoTourDone,
 } from '../constants/productTourStorage';
 import * as api from '../api/services';
+import { clearReviewAllSlot, saveReviewAllSlot } from '../lib/reviewAllProgressStorage';
 
 /** Pool empty / nothing to serve next — show “practice complete”, not a load failure */
 function isPracticeFinishedNoMore(message: string): boolean {
@@ -35,27 +41,15 @@ function isPracticeFinishedNoMore(message: string): boolean {
 
 const QUIZ_TOUR_STEPS: ProductTourStep[] = [
   {
-    selector: '[data-product-tour="quiz-back"]',
-    title: 'Go back',
-    body: 'Need a breather? Tap here anytime to go back.',
-    inflate: 6,
-  },
-  {
-    selector: '[data-product-tour="quiz-progress"]',
-    title: 'Session progress',
-    body: 'Watch this bar grow as you go.',
-    inflate: 8,
-  },
-  {
-    selector: '[data-product-tour="quiz-streak"]',
-    title: 'Session progress',
-    body: 'Your streak sits beside the flame — it goes up by one each time you nail another correct answer in a row.',
-    inflate: 8,
+    selector: '[data-product-tour="quiz-progress-streak"]',
+    title: 'Progress & streak',
+    body: 'The bar shows how far you are in this run. The text on the right shows your position when there is a count to show. Top right: how many right answers you have in a row—one wrong answer zeros it',
+    inflate: 10,
   },
   {
     selector: '[data-product-tour="quiz-card"]',
-    title: 'Swipe to answer',
-    body: 'Swipe right for True or left for False. Swipe up to save the question.',
+    title: 'Answer on the card',
+    body: 'Swipe right for True, left for False. Swipe up to save this question for later',
     inflate: 12,
   },
 ];
@@ -64,7 +58,7 @@ const WRONG_VIDEO_TOUR_STEPS: ProductTourStep[] = [
   {
     selector: '[data-product-tour="quiz-wrong-continue"]',
     title: 'Wrong answer',
-    body: 'Wrong answers open a short full-screen video. Tap Continue when you are ready for the next question.',
+    body: 'Short full-screen safety warning—tap Continue for the next question',
     inflate: 6,
   },
 ];
@@ -87,6 +81,7 @@ export default function QuizScreen() {
   const getPracticeProgress = useQuizStore((s) => s.getPracticeProgress);
   const practiceSessionTotal = useQuizStore((s) => s.practiceSessionTotal);
   const practiceProgressIndex = useQuizStore((s) => s.practiceProgressIndex);
+  const reviewAllRandomOrder = useQuizStore((s) => s.reviewAllRandomOrder);
   const startPractice = useQuizStore((s) => s.startPractice);
   const clearQuiz = useQuizStore((s) => s.clearQuiz);
   const videoAutoplayOnWrong = useSettingsStore((s) => s.videoAutoplayOnWrong);
@@ -106,11 +101,24 @@ export default function QuizScreen() {
   /** 错题全屏视频播放期间预取下一题，Continue 时直接换题、不闪 loading */
   const practiceNextPrefetchRef = useRef<Promise<api.QuestionDetail> | null>(null);
 
-  const isReview = source === 'review_favorite' || source === 'review_mistake';
+  const isReview =
+    source === 'review_favorite' || source === 'review_mistake' || source === 'review_all';
 
-  const exitReviewToReviewScreen = useCallback(() => {
+  const exitReviewSession = useCallback(() => {
+    const st = useQuizStore.getState();
+    const { source, current, error, loading, reviewIds, reviewIndex, reviewAllRandomOrder } = st;
+    if (source === 'review_all' && reviewIds.length > 0) {
+      const finishedPass = !loading && !error && !current;
+      if (finishedPass) {
+        clearReviewAllSlot(reviewAllRandomOrder);
+      } else {
+        saveReviewAllSlot(reviewAllRandomOrder, { reviewIds, reviewIndex });
+      }
+    }
+    const src = source;
     clearQuiz();
-    navigate('/review');
+    if (src === 'review_all') navigate('/menu');
+    else navigate('/profile');
   }, [clearQuiz, navigate]);
   const reviewDone = isReview && !loading && !error && !current && reviewIds.length > 0;
   const needsPracticeKickoff = !source && !current && !loading && !error;
@@ -121,7 +129,7 @@ export default function QuizScreen() {
 
   const quizTourEligible =
     userId != null &&
-    source === 'practice' &&
+    source != null &&
     current != null &&
     !loading &&
     wrongVideo == null &&
@@ -315,9 +323,11 @@ export default function QuizScreen() {
           <div className="w-16 h-16 rounded-2xl bg-emerald-500/30 flex items-center justify-center mx-auto mb-4">
             <i className="fas fa-circle-check text-3xl text-emerald-400" />
           </div>
-          <h2 className="text-xl font-bold">Review complete</h2>
-          <PrimaryButton variant="accent" className="mt-6" onClick={exitReviewToReviewScreen}>
-            Back to review
+          <h2 className="text-xl font-bold">
+            {source === 'review_all' ? 'You finished the whole set' : 'Done with this set'}
+          </h2>
+          <PrimaryButton variant="accent" className="mt-6" onClick={exitReviewSession}>
+            {source === 'review_all' ? 'Back to menu' : 'Back to Profile'}
           </PrimaryButton>
         </div>
       </div>
@@ -329,8 +339,8 @@ export default function QuizScreen() {
       <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-160px)] px-4">
         <div className="glass p-8 rounded-2xl text-center max-w-[320px]">
           <p className="text-cc-fg text-sm">{error}</p>
-          <PrimaryButton variant="accent" className="mt-6" onClick={exitReviewToReviewScreen}>
-            Back to review
+          <PrimaryButton variant="accent" className="mt-6" onClick={exitReviewSession}>
+            {source === 'review_all' ? 'Back to menu' : 'Back to Profile'}
           </PrimaryButton>
         </div>
       </div>
@@ -379,8 +389,8 @@ export default function QuizScreen() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
           >
-            <span className="inline-flex max-w-full items-center justify-center gap-2 rounded-2xl border border-white/35 bg-cc-accent/45 px-5 py-2.5 text-center text-sm font-semibold text-white shadow-lg backdrop-blur-xl">
-              <i className="fas fa-bookmark shrink-0 text-white" aria-hidden />
+            <span className="inline-flex max-w-full items-center justify-center gap-2 rounded-2xl border border-amber-300/40 bg-amber-500/45 px-5 py-2.5 text-center text-sm font-semibold text-white shadow-lg backdrop-blur-xl">
+              <i className="fas fa-bookmark shrink-0 text-amber-50" aria-hidden />
               <span className="min-w-0 whitespace-normal break-words">{favToast}</span>
             </span>
           </motion.div>
@@ -388,76 +398,92 @@ export default function QuizScreen() {
       </AnimatePresence>
 
       <div className="pt-2 pb-4">
-        <QuizSessionHeader
-          title={
-            source === 'practice' ? 'Quiz' : source === 'review_mistake' ? 'Wrong answers' : 'Saved questions'
-          }
-          {...(source === 'practice' ? { streakDataTour: 'quiz-streak' } : {})}
-          subtitle={
-            source === 'practice' ? (
-              <p className="line-clamp-2">{PRACTICE_MODE_SUBTITLE}</p>
-            ) : source === 'review_mistake' ? (
-              <p className="line-clamp-3">{MISTAKE_LIST_RULE}</p>
-            ) : isReview ? (
-              <p className="line-clamp-2">Fixed order · your saved list</p>
-            ) : undefined
-          }
-          streak={streak}
-          onBack={() => (source === 'practice' ? navigate('/menu') : exitReviewToReviewScreen())}
-          backAriaLabel="Go back"
-          {...(source === 'practice' ? { backDataTour: 'quiz-back' } : {})}
-        />
+        <div data-product-tour="quiz-progress-streak" className="mb-6 flex flex-col gap-4">
+          <QuizSessionHeader
+            title={
+              source === 'practice'
+                ? 'Spaced practice'
+                : source === 'review_mistake'
+                  ? 'Wrong answers'
+                  : source === 'review_all'
+                    ? FULL_BANK_MODE_TITLE
+                    : 'Saved questions'
+            }
+            subtitle={
+              source === 'practice' ? (
+                <p className="line-clamp-2 leading-snug">{PRACTICE_MODE_SUBTITLE}</p>
+              ) : source === 'review_mistake' ? (
+                <p className="line-clamp-3">{MISTAKE_LIST_RULE}</p>
+              ) : source === 'review_all' ? (
+                <p className="line-clamp-2 leading-snug">
+                  {reviewAllRandomOrder
+                    ? FULL_BANK_QUIZ_SUBTITLE_SHUFFLED
+                    : FULL_BANK_QUIZ_SUBTITLE_LIST_ORDER}
+                </p>
+              ) : source === 'review_favorite' ? (
+                <p className="line-clamp-2">Fixed order · your saved list</p>
+              ) : undefined
+            }
+            streak={streak}
+            onBack={() => (source === 'practice' ? navigate('/menu') : exitReviewSession())}
+            backAriaLabel="Go back"
+          />
 
-        <div className="flex items-center gap-2 mb-6" data-product-tour="quiz-progress">
-          <div
-            className={`flex-1 h-1.5 rounded-full bg-cc-track overflow-hidden ${source === 'practice' && practiceSessionTotal == null ? 'motion-safe:animate-pulse' : ''}`}
-          >
-            {isReview && reviewIds.length > 0 ? (
-              <motion.div
-                key={`review-${source}-${reviewIds.length}-${reviewIds[0] ?? 0}`}
-                className={`h-full rounded-full ${
-                  source === 'review_mistake' ? 'bg-amber-400' : 'bg-cc-accent'
-                }`}
-                initial={{ width: '0%' }}
-                animate={{
-                  width: `${Math.min(
-                    100,
-                    Math.round(((reviewIndex + 1) / reviewIds.length) * 100),
-                  )}%`,
-                }}
-                transition={{ type: 'tween', duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              />
-            ) : source === 'practice' ? (
-              <motion.div
-                key={
-                  practiceSessionTotal != null && practiceSessionTotal > 0
-                    ? `practice-${practiceSessionTotal}`
-                    : 'practice-pending'
-                }
-                className="h-full rounded-full bg-emerald-500"
-                initial={{ width: '0%' }}
-                animate={{
-                  width:
+          <div className="flex items-center gap-2">
+            <div
+              className={`flex-1 h-1.5 rounded-full bg-cc-track overflow-hidden ${source === 'practice' && practiceSessionTotal == null ? 'motion-safe:animate-pulse' : ''}`}
+            >
+              {isReview && reviewIds.length > 0 ? (
+                <motion.div
+                  key={`review-${source}-${reviewIds.length}-${reviewIds[0] ?? 0}`}
+                  className={`h-full rounded-full ${
+                    source === 'review_mistake'
+                      ? 'bg-rose-500'
+                      : source === 'review_all'
+                        ? 'bg-indigo-300'
+                        : 'bg-amber-400'
+                  }`}
+                  initial={{ width: '0%' }}
+                  animate={{
+                    width: `${Math.min(
+                      100,
+                      Math.round(((reviewIndex + 1) / reviewIds.length) * 100),
+                    )}%`,
+                  }}
+                  transition={{ type: 'tween', duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                />
+              ) : source === 'practice' ? (
+                <motion.div
+                  key={
                     practiceSessionTotal != null && practiceSessionTotal > 0
-                      ? `${Math.min(
-                          100,
-                          Math.round(((practiceProgressIndex + 1) / practiceSessionTotal) * 100),
-                        )}%`
-                      : '0%',
-                }}
-                transition={{
-                  type: 'tween',
-                  duration: practiceSessionTotal != null && practiceSessionTotal > 0 ? 0.5 : 0,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-              />
-            ) : (
-              <div className="h-full w-full rounded-full bg-cc-fill" />
-            )}
+                      ? `practice-${practiceSessionTotal}`
+                      : 'practice-pending'
+                  }
+                  className="h-full rounded-full bg-emerald-500"
+                  initial={{ width: '0%' }}
+                  animate={{
+                    width:
+                      practiceSessionTotal != null && practiceSessionTotal > 0
+                        ? `${Math.min(
+                            100,
+                            Math.round(((practiceProgressIndex + 1) / practiceSessionTotal) * 100),
+                          )}%`
+                        : '0%',
+                  }}
+                  transition={{
+                    type: 'tween',
+                    duration: practiceSessionTotal != null && practiceSessionTotal > 0 ? 0.5 : 0,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                />
+              ) : (
+                <div className="h-full w-full rounded-full bg-cc-fill" />
+              )}
+            </div>
+            <span className="text-xs text-cc-muted whitespace-nowrap shrink-0">
+              {progressLabel || (source === 'practice' ? null : '—')}
+            </span>
           </div>
-          <span className="text-xs text-cc-muted whitespace-nowrap shrink-0">
-            {progressLabel || (source === 'practice' ? null : '—')}
-          </span>
         </div>
 
         <div className="min-h-[420px] flex items-center justify-center relative">
@@ -485,7 +511,7 @@ export default function QuizScreen() {
       </div>
 
       <ProductTourOverlay
-        open={quizTourOpen && wrongVideo == null && current != null && source === 'practice'}
+        open={quizTourOpen && wrongVideo == null && current != null && source != null}
         steps={QUIZ_TOUR_STEPS}
         bottomInsetPx={112}
         onClose={() => setQuizTourOpen(false)}

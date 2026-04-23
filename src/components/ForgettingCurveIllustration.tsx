@@ -95,7 +95,7 @@ export default function ForgettingCurveIllustration() {
       <svg
         viewBox="0 -8 248 128"
         className="w-full h-auto max-h-[152px]"
-        aria-label={`Ebbinghaus-style forgetting curve (schematic). Time on horizontal axis (${T_AXIS_MIN} min to ${T_AXIS_MAX} min, log spacing). Markers: ${ariaMarkers}.`}
+        aria-label={`Ebbinghaus-style forgetting curve (schematic). Time on horizontal axis (${T_AXIS_MIN} min to ${T_AXIS_MAX} min, log spacing). Markers: ${ariaMarkers}`}
       >
         <defs>
           <linearGradient id={`${gid}-fade`} x1="0" y1="0" x2="0" y2="1">
@@ -186,7 +186,7 @@ export default function ForgettingCurveIllustration() {
         </text>
       </svg>
       <p className="text-cc-muted text-[11px] leading-snug mt-2 text-center px-0.5">
-        Retention falls fast early, then slows—reviews help bring it back up.
+        Retention falls fast early, then slows; reviews help bring it back up
       </p>
     </div>
   );

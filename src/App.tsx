@@ -5,7 +5,6 @@ import RootRedirect from './components/RootRedirect';
 import LoginScreen from './screens/LoginScreen';
 import MenuScreen from './screens/MenuScreen';
 import QuizScreen from './screens/QuizScreen';
-import ReviewScreen from './screens/ReviewScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import SettingsScreen from './screens/SettingsScreen';
 
@@ -20,7 +19,7 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/menu" element={<MenuScreen />} />
               <Route path="/quiz" element={<QuizScreen />} />
-              <Route path="/review" element={<ReviewScreen />} />
+              <Route path="/review" element={<Navigate to="/profile" replace />} />
               <Route path="/profile" element={<ProfileScreen />} />
               <Route path="/settings" element={<SettingsScreen />} />
             </Route>

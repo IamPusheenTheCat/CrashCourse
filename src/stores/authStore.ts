@@ -8,6 +8,7 @@ import {
   writePersistedAuthField,
 } from '../api/client';
 import * as api from '../api/services';
+import { clearAllReviewAllProgress } from '../lib/reviewAllProgressStorage';
 import { useQuizStore } from './quizStore';
 
 const USER_ID_KEY = 'crashcourse-user-id';
@@ -75,6 +76,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     writeUserId(null);
     writeUserEmail(null);
     useQuizStore.getState().clearQuiz();
+    clearAllReviewAllProgress();
     set({ token: null, userId: null, userEmail: null, isAuthenticated: false });
   },
 
