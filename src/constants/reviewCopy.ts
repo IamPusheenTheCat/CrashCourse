@@ -5,11 +5,11 @@
 export const MISTAKE_LIST_RULE = 'Removed after two correct answers in a row';
 
 /** Menu row + quiz header: each question once per session (full question bank) */
-export const FULL_BANK_MODE_TITLE = 'Full-bank pass';
+export const FULL_BANK_MODE_TITLE = 'Full Run-Through';
 
 /** Menu subtitle under full-bank row */
-export const FULL_BANK_MENU_SUBTITLE = 'Full run · list or shuffle';
+export const FULL_BANK_MENU_SUBTITLE = 'Go over all questions · list/shuffle';
 
 /** Quiz session header under full-bank mode */
-export const FULL_BANK_QUIZ_SUBTITLE_SHUFFLED = 'Full run · shuffled order';
-export const FULL_BANK_QUIZ_SUBTITLE_LIST_ORDER = 'Full run · list order';
+export const FULL_BANK_QUIZ_SUBTITLE_SHUFFLED = 'Every question · shuffled';
+export const FULL_BANK_QUIZ_SUBTITLE_LIST_ORDER = 'Every question · list order';

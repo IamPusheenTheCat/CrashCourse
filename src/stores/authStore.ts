@@ -10,6 +10,7 @@ import {
 import * as api from '../api/services';
 import { clearAllReviewAllProgress } from '../lib/reviewAllProgressStorage';
 import { useQuizStore } from './quizStore';
+import { useProfileStore } from './profileStore';
 
 const USER_ID_KEY = 'crashcourse-user-id';
 const USER_EMAIL_KEY = 'crashcourse-user-email';
@@ -76,6 +77,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     writeUserId(null);
     writeUserEmail(null);
     useQuizStore.getState().clearQuiz();
+    useProfileStore.getState().clear();
     clearAllReviewAllProgress();
     set({ token: null, userId: null, userEmail: null, isAuthenticated: false });
   },

@@ -2,11 +2,11 @@
 export const PRACTICE_MODE_EBBINGHAUS_LABEL = 'Ebbinghaus Forgetting Curve';
 
 /** Hover / screen reader — one short line */
-export const PRACTICE_MODE_EBBINGHAUS_CHIP_TITLE = 'Spaced to help recall';
+export const PRACTICE_MODE_EBBINGHAUS_CHIP_TITLE = 'Timed for better recall';
 
 /** Quiz header & menu practice row */
 /** Menu + quiz practice subtitle — length ~ other menu rows */
-export const PRACTICE_MODE_SUBTITLE = 'Spaced recall · due next';
+export const PRACTICE_MODE_SUBTITLE = 'Smart review · start now';
 
 /** 菜单：0 due 或练习池暂时为空（与 get_next 无题一致） */
 export const PRACTICE_MENU_NOTHING_TO_PRACTICE = 'Nothing due right now';

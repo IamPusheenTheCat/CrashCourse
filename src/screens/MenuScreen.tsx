@@ -27,7 +27,7 @@ const items = [
     icon: 'fa-wave-square',
     iconBg: 'border border-emerald-400/25 bg-emerald-500/20',
     iconColor: 'text-emerald-400',
-    title: 'Spaced practice',
+    title: 'Daily Practice',
     sub: PRACTICE_MODE_SUBTITLE,
   },
   {
@@ -59,7 +59,7 @@ const items = [
 const MENU_TOUR_STEPS: ProductTourStep[] = [
   {
     selector: '[data-product-tour="menu-practice"]',
-    title: 'Spaced practice',
+    title: 'Daily Practice',
     body: 'Questions come back when it is time to review—that sticks better than cramming. On the right: how many are ready now. When that reads zero, you may see a countdown until the next question is ready',
     inflate: 10,
   },

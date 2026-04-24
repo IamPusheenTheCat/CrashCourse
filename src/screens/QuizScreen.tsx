@@ -402,7 +402,7 @@ export default function QuizScreen() {
           <QuizSessionHeader
             title={
               source === 'practice'
-                ? 'Spaced practice'
+                ? 'Daily Practice'
                 : source === 'review_mistake'
                   ? 'Wrong answers'
                   : source === 'review_all'

@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import GlassCard from '../components/GlassCard';
 import ScreenHeader from '../components/ui/ScreenHeader';
 import ForgettingCurveIllustration from '../components/ForgettingCurveIllustration';
 import ReviewModeRow from '../components/ReviewModeRow';
 import { useNavigate } from 'react-router-dom';
-import * as api from '../api/services';
 import { useQuizStore } from '../stores/quizStore';
 import { useAuthStore } from '../stores/authStore';
+import { useProfileStore } from '../stores/profileStore';
 import { PROFILE_MISTAKES_SAVED_SECTION_TITLE, PROFILE_SCREEN_SUBTITLE } from '../constants/profileCopy';
 
 const skBar = 'rounded-md bg-cc-fill motion-safe:animate-pulse';
@@ -83,36 +83,16 @@ export default function ProfileScreen() {
   const navigate = useNavigate();
   const userEmail = useAuthStore((s) => s.userEmail);
   const startReview = useQuizStore((s) => s.startReview);
-  const [summary, setSummary] = useState<api.StatsSummary | null>(null);
-  const [mistakeBookTotal, setMistakeBookTotal] = useState<number | null>(null);
-  const [favoriteListTotal, setFavoriteListTotal] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cached = useProfileStore((s) => s.cached);
+  const coldLoading = useProfileStore((s) => s.coldLoading);
+  const profileError = useProfileStore((s) => s.error);
+  const loadProfile = useProfileStore((s) => s.load);
   const [reviewLaunching, setReviewLaunching] = useState<'mistake' | 'favorite' | null>(null);
   const [reviewLaunchError, setReviewLaunchError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      const [stats, mistakes, favorites] = await Promise.all([
-        api.getStatsSummary(),
-        api.getMistakeList(1, 1),
-        api.getFavoriteList(1, 1),
-      ]);
-      setSummary(stats);
-      setMistakeBookTotal(mistakes.total);
-      setFavoriteListTotal(favorites.total);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load stats');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadProfile();
+  }, [loadProfile]);
 
   const startReviewFromProfile = async (mode: 'mistake' | 'favorite') => {
     if (reviewLaunching) return;
@@ -132,6 +112,12 @@ export default function ProfileScreen() {
       setReviewLaunching(null);
     }
   };
+
+  const summary = cached?.summary ?? null;
+  const mistakeBookTotal = cached?.mistakeBookTotal ?? null;
+  const favoriteListTotal = cached?.favoriteListTotal ?? null;
+  const loading = coldLoading && !cached;
+  const error = profileError;
 
   const totalAnswered = summary?.total_answered ?? 0;
   const totalCorrect = summary?.correct_count ?? 0;
