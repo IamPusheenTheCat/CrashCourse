@@ -101,7 +101,7 @@ export default function VideoOverlay({
       >
         <video
           ref={videoRef}
-          className="w-full h-full object-cover"
+          className="relative z-0 w-full h-full object-cover"
           playsInline
           loop
           preload="auto"
@@ -109,6 +109,10 @@ export default function VideoOverlay({
           onLoadedMetadata={isIOS ? () => setIsReady(true) : undefined}
           onLoadedData={!isIOS ? () => setIsReady(true) : undefined}
           style={{ visibility: isReady ? 'visible' : 'hidden' }}
+        />
+        <div
+          className="cc-wrong-video-halo absolute inset-0 z-[1]"
+          aria-hidden
         />
       </div>
       {!isReady && (

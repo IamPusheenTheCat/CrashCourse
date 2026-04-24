@@ -101,3 +101,19 @@ body {
   border-radius: var(--radius);
 }
 
+/** 错题全屏警示视频：窄带内收边晕，少侵中间画面 */
+@keyframes wrongVideoHaloPulse {
+  0%, 100% { opacity: 0.78; }
+  50%      { opacity: 1; }
+}
+.cc-wrong-video-halo {
+  pointer-events: none;
+  animation: wrongVideoHaloPulse 1.65s ease-in-out infinite;
+  box-shadow:
+    inset 0 0 22px 6px rgba(239, 68, 68, 0.55),
+    inset 0 0 44px 16px rgba(220, 38, 38, 0.32),
+    inset 0 0 72px 28px rgba(234, 88, 12, 0.16),
+    inset 0 0 0 2px rgba(251, 146, 60, 0.68),
+    inset 0 0 0 1px rgba(254, 226, 226, 0.28);
+}
+
